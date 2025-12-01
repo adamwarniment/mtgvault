@@ -1,0 +1,155 @@
+import { Response } from 'express';
+import { PrismaClient } from '@prisma/client';
+import { AuthRequest } from '../middleware/auth';
+
+const prisma = new PrismaClient();
+
+export const getBinders = async (req: AuthRequest, res: Response) => {
+    try {
+        const binders = await prisma.binder.findMany({
+            where: { userId: req.user!.userId },
+            include: { cards: true },
+        });
+        res.json(binders);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch binders' });
+    }
+};
+
+export const createBinder = async (req: AuthRequest, res: Response) => {
+    const { name, layout } = req.body;
+    try {
+        const binder = await prisma.binder.create({
+            data: {
+                name,
+                layout: layout || 'GRID_3x3',
+                userId: req.user!.userId,
+            },
+        });
+        res.status(201).json(binder);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to create binder' });
+    }
+};
+
+export const getBinder = async (req: AuthRequest, res: Response) => {
+    const { id } = req.params;
+    try {
+        const binder = await prisma.binder.findUnique({
+            where: { id },
+            include: { cards: true },
+        });
+
+        if (!binder) {
+            return res.status(404).json({ error: 'Binder not found' });
+        }
+
+        if (binder.userId !== req.user!.userId) {
+            return res.status(403).json({ error: 'Unauthorized' });
+        }
+
+        res.json(binder);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch binder' });
+    }
+};
+
+export const addCard = async (req: AuthRequest, res: Response) => {
+    const { id } = req.params;
+    const { scryfallId, positionIndex, imageUrl, name, set, collectorNumber } = req.body;
+
+    try {
+        const binder = await prisma.binder.findUnique({ where: { id } });
+        if (!binder || binder.userId !== req.user!.userId) {
+            return res.status(403).json({ error: 'Unauthorized' });
+        }
+
+        // Check if slot is occupied
+        const existingCard = await prisma.card.findUnique({
+            where: {
+                binderId_positionIndex: {
+                    binderId: id,
+                    positionIndex,
+                },
+            },
+        });
+
+        if (existingCard) {
+            return res.status(400).json({ error: 'Slot already occupied' });
+        }
+
+        const card = await prisma.card.create({
+            data: {
+                binderId: id,
+                scryfallId,
+                positionIndex,
+                imageUrl,
+                name,
+                set,
+                collectorNumber,
+            },
+        });
+
+        res.status(201).json(card);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to add card' });
+    }
+};
+
+export const removeCard = async (req: AuthRequest, res: Response) => {
+    const { id, cardId } = req.params;
+
+    try {
+        const binder = await prisma.binder.findUnique({ where: { id } });
+        if (!binder || binder.userId !== req.user!.userId) {
+            return res.status(403).json({ error: 'Unauthorized' });
+        }
+
+        await prisma.card.delete({
+            where: { id: cardId },
+        });
+
+        res.sendStatus(204);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to remove card' });
+    }
+};
+
+// For drag and drop reordering
+export const updateCardPositions = async (req: AuthRequest, res: Response) => {
+    const { id } = req.params;
+    const { moves } = req.body; // Array of { cardId, newPosition }
+
+    try {
+        const binder = await prisma.binder.findUnique({ where: { id } });
+        if (!binder || binder.userId !== req.user!.userId) {
+            return res.status(403).json({ error: 'Unauthorized' });
+        }
+
+        // Two-phase update to avoid unique constraint violations
+        // Phase 1: Set all positions to negative temporary values
+        // Phase 2: Set positions to final values
+        await prisma.$transaction(async (tx) => {
+            // Phase 1: Move all cards to temporary negative positions
+            for (let i = 0; i < moves.length; i++) {
+                await tx.card.update({
+                    where: { id: moves[i].cardId },
+                    data: { positionIndex: -(i + 1) },
+                });
+            }
+
+            // Phase 2: Move cards to their final positions
+            for (const move of moves) {
+                await tx.card.update({
+                    where: { id: move.cardId },
+                    data: { positionIndex: move.newPosition },
+                });
+            }
+        });
+
+        res.sendStatus(200);
+    } catch (error) {
+        console.error('Failed to update positions:', error);
+        res.status(500).json({ error: 'Failed to update positions' });
+    }
+};

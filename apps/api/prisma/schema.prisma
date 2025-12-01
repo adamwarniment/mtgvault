@@ -1,0 +1,44 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  binders   Binder[]
+}
+
+model Binder {
+  id        String   @id @default(uuid())
+  name      String
+  layout    String   @default("GRID_3x3") // GRID_2x2, GRID_3x3, GRID_4x3
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  cards     Card[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Card {
+  id              String   @id @default(uuid())
+  binderId        String
+  binder          Binder   @relation(fields: [binderId], references: [id], onDelete: Cascade)
+  scryfallId      String
+  positionIndex   Int
+  imageUrl        String
+  name            String
+  set             String?
+  collectorNumber String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([binderId, positionIndex])
+}
