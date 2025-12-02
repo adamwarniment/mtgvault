@@ -31,6 +31,10 @@ COPY --from=builder /app/dist ./dist
 # Generate Prisma Client
 RUN npx prisma generate
 
+# Copy and set up entrypoint script
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
 EXPOSE 3000
 
-CMD ["npm", "start"]
+ENTRYPOINT ["docker-entrypoint.sh"]
