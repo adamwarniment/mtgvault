@@ -1,5 +1,6 @@
 import { Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import axios from 'axios';
 import { AuthRequest } from '../middleware/auth';
 
 const prisma = new PrismaClient();
@@ -56,7 +57,7 @@ export const getBinder = async (req: AuthRequest, res: Response) => {
 
 export const addCard = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
-    const { scryfallId, positionIndex, imageUrl, name, set, collectorNumber } = req.body;
+    const { scryfallId, positionIndex, imageUrl, name, set, collectorNumber, priceUsd } = req.body;
 
     try {
         const binder = await prisma.binder.findUnique({ where: { id } });
@@ -87,6 +88,7 @@ export const addCard = async (req: AuthRequest, res: Response) => {
                 name,
                 set,
                 collectorNumber,
+                priceUsd,
             },
         });
 
@@ -151,5 +153,88 @@ export const updateCardPositions = async (req: AuthRequest, res: Response) => {
     } catch (error) {
         console.error('Failed to update positions:', error);
         res.status(500).json({ error: 'Failed to update positions' });
+    }
+};
+
+export const refreshCardPrice = async (req: AuthRequest, res: Response) => {
+    const { id, cardId } = req.params;
+
+    try {
+        const binder = await prisma.binder.findUnique({ where: { id } });
+        if (!binder || binder.userId !== req.user!.userId) {
+            return res.status(403).json({ error: 'Unauthorized' });
+        }
+
+        const card = await prisma.card.findUnique({ where: { id: cardId } });
+        if (!card) {
+            return res.status(404).json({ error: 'Card not found' });
+        }
+
+        // Fetch latest data from Scryfall
+        const response = await axios.get(`https://api.scryfall.com/cards/${card.scryfallId}`);
+        const scryfallCard = response.data;
+
+        const priceUsd = scryfallCard.prices?.usd
+            ? parseFloat(scryfallCard.prices.usd)
+            : scryfallCard.prices?.usd_foil
+                ? parseFloat(scryfallCard.prices.usd_foil)
+                : scryfallCard.prices?.usd_etched
+                    ? parseFloat(scryfallCard.prices.usd_etched)
+                    : null;
+
+        const updatedCard = await prisma.card.update({
+            where: { id: cardId },
+            data: { priceUsd },
+        });
+
+        res.json(updatedCard);
+    } catch (error) {
+        console.error('Failed to refresh price:', error);
+        res.status(500).json({ error: 'Failed to refresh price' });
+    }
+};
+
+export const toggleCardPurchased = async (req: AuthRequest, res: Response) => {
+    const { id, cardId } = req.params;
+    const { isPurchased } = req.body;
+
+    try {
+        const binder = await prisma.binder.findUnique({ where: { id } });
+        if (!binder || binder.userId !== req.user!.userId) {
+            return res.status(403).json({ error: 'Unauthorized' });
+        }
+
+        const updatedCard = await prisma.card.update({
+            where: { id: cardId },
+            data: { isPurchased },
+        });
+
+        res.json(updatedCard);
+    } catch (error) {
+        console.error('Failed to toggle purchased status:', error);
+        res.status(500).json({ error: 'Failed to toggle purchased status' });
+    }
+};
+
+export const updateBinderSettings = async (req: AuthRequest, res: Response) => {
+    const { id } = req.params;
+    const { grayOutUnpurchased } = req.body;
+
+    try {
+        const binder = await prisma.binder.findUnique({ where: { id } });
+        if (!binder || binder.userId !== req.user!.userId) {
+            return res.status(403).json({ error: 'Unauthorized' });
+        }
+
+        const updatedBinder = await prisma.binder.update({
+            where: { id },
+            data: { grayOutUnpurchased },
+            include: { cards: true },
+        });
+
+        res.json(updatedBinder);
+    } catch (error) {
+        console.error('Failed to update binder settings:', error);
+        res.status(500).json({ error: 'Failed to update binder settings' });
     }
 };

@@ -1,14 +1,26 @@
 import React from 'react';
-import { X } from 'lucide-react';
+import { X, RefreshCw, Loader2 } from 'lucide-react';
 import { Button } from './ui/Button';
 
 interface CardDetailsModalProps {
     card: any;
     onClose: () => void;
+    onRefresh: () => Promise<void>;
 }
 
-const CardDetailsModal: React.FC<CardDetailsModalProps> = ({ card, onClose }) => {
+const CardDetailsModal: React.FC<CardDetailsModalProps> = ({ card, onClose, onRefresh }) => {
+    const [isRefreshing, setIsRefreshing] = React.useState(false);
+
     if (!card) return null;
+
+    const handleRefresh = async () => {
+        setIsRefreshing(true);
+        try {
+            await onRefresh();
+        } finally {
+            setIsRefreshing(false);
+        }
+    };
 
     return (
         <div
@@ -43,6 +55,31 @@ const CardDetailsModal: React.FC<CardDetailsModalProps> = ({ card, onClose }) =>
                             <span className="text-gray-400">#{card.collectorNumber}</span>
                         </div>
                     )}
+
+                    <div className="mb-6">
+                        <div className="flex items-center justify-between mb-1">
+                            <p className="text-gray-400 text-xs uppercase tracking-wider">Market Price</p>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={handleRefresh}
+                                disabled={isRefreshing}
+                                className="h-6 px-2 text-xs text-purple-400 hover:text-purple-300 hover:bg-purple-500/10"
+                            >
+                                {isRefreshing ? (
+                                    <Loader2 className="w-3 h-3 animate-spin mr-1" />
+                                ) : (
+                                    <RefreshCw className="w-3 h-3 mr-1" />
+                                )}
+                                Refresh
+                            </Button>
+                        </div>
+                        {card.priceUsd ? (
+                            <p className="text-2xl font-bold text-green-400 font-mono">${card.priceUsd.toFixed(2)}</p>
+                        ) : (
+                            <p className="text-xl font-bold text-gray-500 font-mono">--</p>
+                        )}
+                    </div>
 
                     <div className="flex-1 border-t border-white/10 pt-6">
                         <div className="p-4 rounded-xl bg-white/5 border border-white/5">

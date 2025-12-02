@@ -16,7 +16,7 @@ import {
   rectSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Plus, Trash2, Edit, Save, Layers, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Trash2, Edit, Save, Layers, ChevronLeft, ChevronRight, Check, Eye, EyeOff } from 'lucide-react';
 import api from '../api';
 import Layout from '../components/Layout';
 import SearchModal from '../components/SearchModal';
@@ -24,6 +24,7 @@ import DeleteCardModal from '../components/DeleteCardModal';
 import CardDetailsModal from '../components/CardDetailsModal';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent } from '../components/ui/Card';
+import { Switch } from '../components/ui/Switch';
 
 // --- Types ---
 interface CardType {
@@ -34,12 +35,15 @@ interface CardType {
   name: string;
   set?: string;
   collectorNumber?: string;
+  priceUsd?: number;
+  isPurchased: boolean;
 }
 
 interface Binder {
   id: string;
   name: string;
   layout: 'GRID_2x2' | 'GRID_3x3' | 'GRID_4x3';
+  grayOutUnpurchased: boolean;
   cards: CardType[];
 }
 
@@ -47,9 +51,12 @@ interface Binder {
 const SortableCard = ({
   id,
   card,
+  index,
   isEditMode,
   onClick,
   onRemove,
+  grayOutUnpurchased,
+  onTogglePurchased,
 }: {
   id: string;
   card?: CardType;
@@ -57,6 +64,8 @@ const SortableCard = ({
   isEditMode: boolean;
   onClick: () => void;
   onRemove: () => void;
+  grayOutUnpurchased: boolean;
+  onTogglePurchased: (isPurchased: boolean) => void;
 }) => {
   const {
     attributes,
@@ -86,13 +95,22 @@ const SortableCard = ({
     onRemove();
   };
 
+  const handleTogglePurchased = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (card) {
+      onTogglePurchased(!card.isPurchased);
+    }
+  };
+
+  const isGrayedOut = card && !card.isPurchased && grayOutUnpurchased;
+
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`relative aspect-[63/88] rounded-lg border-2 transition-all ${isEditMode && card ? 'cursor-grab active:cursor-grabbing' : ''
+      className={`relative aspect-[63/88] rounded-lg border-2 transition-all group ${isEditMode && card ? 'cursor-grab active:cursor-grabbing' : ''
         } ${!card
-          ? 'border-dashed border-yellow-900/30 hover:border-yellow-600/50 flex items-center justify-center cursor-pointer bg-gradient-to-br from-yellow-50/5 to-yellow-100/5 hover:from-yellow-50/10 hover:to-yellow-100/10 group'
+          ? 'border-dashed border-yellow-900/30 hover:border-yellow-600/50 flex items-center justify-center cursor-pointer bg-gradient-to-br from-yellow-50/5 to-yellow-100/5 hover:from-yellow-50/10 hover:to-yellow-100/10'
           : 'border-yellow-900/20 hover:border-yellow-600/40 shadow-md'
         }`}
       onClick={!isEditMode ? onClick : undefined}
@@ -100,12 +118,26 @@ const SortableCard = ({
     >
       {card ? (
         <>
-          <div className="w-full h-full overflow-hidden rounded-md">
+          <div className="w-full h-full overflow-hidden rounded-md relative">
             <img
               src={card.imageUrl}
               alt={card.name}
-              className="w-full h-full object-cover"
+              className={`w-full h-full object-cover transition-all duration-300 ${isGrayedOut ? 'grayscale brightness-75' : ''}`}
             />
+            {/* Purchased Checkbox Overlay */}
+            {!isEditMode && (
+              <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-20">
+                <div
+                  className={`w-6 h-6 rounded border-2 flex items-center justify-center cursor-pointer transition-colors ${card.isPurchased
+                    ? 'bg-green-500 border-green-500 text-white'
+                    : 'bg-black/50 border-white/50 hover:bg-black/70'
+                    }`}
+                  onClick={handleTogglePurchased}
+                >
+                  {card.isPurchased && <Check className="w-4 h-4" />}
+                </div>
+              </div>
+            )}
           </div>
           {isEditMode && (
             <button
@@ -118,8 +150,15 @@ const SortableCard = ({
             </button>
           )}
           {!isEditMode && (
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 hover:opacity-100 transition-opacity flex items-end p-2">
-              <p className="text-white text-xs font-medium truncate">{card.name}</p>
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-2 pointer-events-none">
+              <div className="flex justify-between items-end w-full">
+                <p className="text-white text-xs font-medium truncate flex-1 mr-1">{card.name}</p>
+                {card.priceUsd && (
+                  <span className="text-green-400 text-xs font-mono font-bold bg-black/50 px-1.5 py-0.5 rounded">
+                    ${card.priceUsd.toFixed(2)}
+                  </span>
+                )}
+              </div>
             </div>
           )}
         </>
@@ -179,6 +218,14 @@ const BinderView: React.FC = () => {
         name: scryfallCard.name,
         set: scryfallCard.set,
         collectorNumber: scryfallCard.collector_number,
+        priceUsd: scryfallCard.prices?.usd
+          ? parseFloat(scryfallCard.prices.usd)
+          : scryfallCard.prices?.usd_foil
+            ? parseFloat(scryfallCard.prices.usd_foil)
+            : scryfallCard.prices?.usd_etched
+              ? parseFloat(scryfallCard.prices.usd_etched)
+              : null,
+        isPurchased: true,
       });
       setShowSearch(false);
       fetchBinder();
@@ -268,6 +315,51 @@ const BinderView: React.FC = () => {
     }
   };
 
+  const handleRefreshPrice = async () => {
+    if (!binder || !selectedCard) return;
+
+    try {
+      const response = await api.put(`/binders/${binder.id}/cards/${selectedCard.id}/refresh-price`);
+      const updatedCard = response.data;
+
+      // Update local state
+      const newCards = binder.cards.map(c => c.id === updatedCard.id ? { ...c, priceUsd: updatedCard.priceUsd } : c);
+      setBinder({ ...binder, cards: newCards });
+      setSelectedCard({ ...selectedCard, priceUsd: updatedCard.priceUsd });
+    } catch (error) {
+      console.error('Failed to refresh price');
+    }
+  };
+
+  const handleTogglePurchased = async (cardId: string, isPurchased: boolean) => {
+    if (!binder) return;
+
+    // Optimistic update
+    const newCards = binder.cards.map(c => c.id === cardId ? { ...c, isPurchased } : c);
+    setBinder({ ...binder, cards: newCards });
+
+    try {
+      await api.put(`/binders/${binder.id}/cards/${cardId}/purchased`, { isPurchased });
+    } catch (error) {
+      console.error('Failed to toggle purchased status');
+      fetchBinder(); // Revert
+    }
+  };
+
+  const handleToggleGrayOut = async (grayOutUnpurchased: boolean) => {
+    if (!binder) return;
+
+    // Optimistic update
+    setBinder({ ...binder, grayOutUnpurchased });
+
+    try {
+      await api.put(`/binders/${binder.id}/settings`, { grayOutUnpurchased });
+    } catch (error) {
+      console.error('Failed to update binder settings');
+      fetchBinder(); // Revert
+    }
+  };
+
   if (!binder) return (
     <Layout>
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -334,23 +426,38 @@ const BinderView: React.FC = () => {
                 <span>Page {currentPage + 1} of {totalSpreads}</span>
               </div>
             </div>
-            <Button
-              onClick={() => setIsEditMode(!isEditMode)}
-              variant={isEditMode ? "default" : "outline"}
-              className="gap-2"
-            >
-              {isEditMode ? (
-                <>
-                  <Save className="w-4 h-4" />
-                  Done Editing
-                </>
-              ) : (
-                <>
-                  <Edit className="w-4 h-4" />
-                  Edit Binder
-                </>
-              )}
-            </Button>
+            <div className="flex items-center gap-4">
+              {/* Gray Out Setting */}
+              <div className="flex items-center gap-2 bg-gray-800/50 px-3 py-1.5 rounded-lg border border-gray-700">
+                <Switch
+                  checked={binder.grayOutUnpurchased}
+                  onCheckedChange={handleToggleGrayOut}
+                  id="gray-out-mode"
+                />
+                <label htmlFor="gray-out-mode" className="text-sm text-gray-300 cursor-pointer select-none flex items-center gap-2">
+                  {binder.grayOutUnpurchased ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  Gray out unpurchased
+                </label>
+              </div>
+
+              <Button
+                onClick={() => setIsEditMode(!isEditMode)}
+                variant={isEditMode ? "default" : "outline"}
+                className="gap-2"
+              >
+                {isEditMode ? (
+                  <>
+                    <Save className="w-4 h-4" />
+                    Done Editing
+                  </>
+                ) : (
+                  <>
+                    <Edit className="w-4 h-4" />
+                    Edit Binder
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -450,6 +557,8 @@ const BinderView: React.FC = () => {
                           }
                         }}
                         onRemove={() => slot.card && handleRemoveCard(slot.card.id, slot.card.name)}
+                        grayOutUnpurchased={binder.grayOutUnpurchased}
+                        onTogglePurchased={(isPurchased) => slot.card && handleTogglePurchased(slot.card.id, isPurchased)}
                       />
                     ))}
                   </div>
@@ -483,6 +592,8 @@ const BinderView: React.FC = () => {
                           }
                         }}
                         onRemove={() => slot.card && handleRemoveCard(slot.card.id, slot.card.name)}
+                        grayOutUnpurchased={binder.grayOutUnpurchased}
+                        onTogglePurchased={(isPurchased) => slot.card && handleTogglePurchased(slot.card.id, isPurchased)}
                       />
                     ))}
                   </div>
@@ -513,6 +624,7 @@ const BinderView: React.FC = () => {
         <CardDetailsModal
           card={selectedCard}
           onClose={() => setSelectedCard(null)}
+          onRefresh={handleRefreshPrice}
         />
 
         <DeleteCardModal
