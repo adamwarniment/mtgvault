@@ -1,6 +1,9 @@
-FROM node:20-alpine AS builder
+FROM node:20-slim AS builder
 
 WORKDIR /app
+
+# Install OpenSSL for Prisma
+RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 
 COPY package*.json ./
 COPY prisma ./prisma/
@@ -11,23 +14,22 @@ COPY . .
 
 RUN npm run build
 
-FROM node:20-alpine
+FROM node:20-slim
 
 WORKDIR /app
+
+# Install OpenSSL for Prisma
+RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 
 COPY package*.json ./
 COPY prisma ./prisma/
 
-# Install all dependencies (including dev dependencies for prisma CLI)
-RUN npm ci
+RUN npm ci --only=production
 
 COPY --from=builder /app/dist ./dist
 
-# Generate Prisma Client with the binary targets from schema.prisma
+# Generate Prisma Client
 RUN npx prisma generate
-
-# Remove dev dependencies
-RUN npm prune --production
 
 EXPOSE 3000
 
