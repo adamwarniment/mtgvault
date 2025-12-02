@@ -18,12 +18,16 @@ WORKDIR /app
 COPY package*.json ./
 COPY prisma ./prisma/
 
-RUN npm ci --only=production
+# Install all dependencies (including dev dependencies for prisma CLI)
+RUN npm ci
 
 COPY --from=builder /app/dist ./dist
 
-# Generate Prisma Client
+# Generate Prisma Client with the binary targets from schema.prisma
 RUN npx prisma generate
+
+# Remove dev dependencies
+RUN npm prune --production
 
 EXPOSE 3000
 
