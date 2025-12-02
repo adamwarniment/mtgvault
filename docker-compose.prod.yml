@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   api:
-    image: ${IMAGE_PREFIX:-ghcr.io/yourusername/mtgvault}-api:latest
+    image: ${IMAGE_PREFIX:-ghcr.io/yourusername/mtgvault}-api:${IMAGE_TAG:-main}
     restart: always
     environment:
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
@@ -14,7 +14,7 @@ services:
       - postgres
 
   client:
-    image: ${IMAGE_PREFIX:-ghcr.io/yourusername/mtgvault}-client:latest
+    image: ${IMAGE_PREFIX:-ghcr.io/yourusername/mtgvault}-client:${IMAGE_TAG:-main}
     restart: always
     ports:
       - "${CLIENT_PORT:-80}:80"
