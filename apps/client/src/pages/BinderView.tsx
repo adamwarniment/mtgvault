@@ -51,7 +51,7 @@ interface Binder {
 const SortableCard = ({
   id,
   card,
-  index,
+  // index,
   isEditMode,
   onClick,
   onRemove,
