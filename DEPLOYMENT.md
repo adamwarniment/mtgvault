@@ -46,6 +46,11 @@ POSTGRES_DB=mtgvault
 
 # API Configuration
 JWT_SECRET=your_jwt_secret
+
+# Port Configuration (Optional)
+# Defaults to 3000 for API and 80 for Client if not set
+API_PORT=3000
+CLIENT_PORT=80
 ```
 
 ### Docker Compose
