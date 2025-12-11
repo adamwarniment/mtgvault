@@ -16,7 +16,7 @@ import {
   rectSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Plus, Trash2, Edit, Save, Layers, ChevronLeft, ChevronRight, Check, Eye, EyeOff } from 'lucide-react';
+import { Plus, Trash2, Edit, Save, Layers, ChevronLeft, ChevronRight, Check, Eye, EyeOff, LayoutGrid } from 'lucide-react';
 import api from '../api';
 import Layout from '../components/Layout';
 import SearchModal from '../components/SearchModal';
@@ -107,7 +107,7 @@ const SortableCard = ({
     <div
       ref={setNodeRef}
       style={style}
-      className={`relative aspect-[63/88] rounded-lg border-2 transition-all group ${isEditMode && card ? 'cursor-grab active:cursor-grabbing' : ''
+      className={`relative aspect-[63/88] rounded-lg border-2 group ${isEditMode && card ? 'cursor-grab active:cursor-grabbing' : ''
         } ${!card
           ? 'border-dashed border-yellow-900/30 hover:border-yellow-600/50 flex items-center justify-center cursor-pointer bg-gradient-to-br from-yellow-50/5 to-yellow-100/5 hover:from-yellow-50/10 hover:to-yellow-100/10'
           : 'border-yellow-900/20 hover:border-yellow-600/40 shadow-md'
@@ -185,6 +185,8 @@ const BinderView: React.FC = () => {
   const [selectedCard, setSelectedCard] = useState<CardType | null>(null);
   const [currentPage, setCurrentPage] = useState(0);
   const [deleteConfirm, setDeleteConfirm] = useState<{ cardId: string; cardName: string } | null>(null);
+  const [bulkMode, setBulkMode] = useState(false);
+  const [notification, setNotification] = useState<string | null>(null);
 
   // State for mobile detection
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -235,11 +237,44 @@ const BinderView: React.FC = () => {
               : null,
         isPurchased: true,
       });
-      setShowSearch(false);
+
+      if (bulkMode) {
+        // Show notification
+        setNotification('Card added!');
+        setTimeout(() => setNotification(null), 2000);
+
+        // Calculate next empty slot
+        const occupiedIndices = new Set(binder.cards.map(c => c.positionIndex));
+        occupiedIndices.add(selectedSlot); // Add the one we just filled
+
+        let nextSlot = selectedSlot + 1;
+        while (occupiedIndices.has(nextSlot)) {
+          nextSlot++;
+        }
+        setSelectedSlot(nextSlot);
+      } else {
+        setShowSearch(false);
+      }
+
       fetchBinder();
     } catch (error) {
       console.error('Failed to add card');
     }
+  };
+
+  const handleBulkAddClick = () => {
+    if (!binder) return;
+
+    // Find first empty slot
+    const occupiedIndices = new Set(binder.cards.map(c => c.positionIndex));
+    let firstEmptySlot = 0;
+    while (occupiedIndices.has(firstEmptySlot)) {
+      firstEmptySlot++;
+    }
+
+    setSelectedSlot(firstEmptySlot);
+    setBulkMode(true);
+    setShowSearch(true);
   };
 
   const handleRemoveCard = async (cardId: string, cardName: string) => {
@@ -302,10 +337,31 @@ const BinderView: React.FC = () => {
 
     const overCard = newCards.find((c) => c.positionIndex === newIndex);
 
-    // Swap positions
-    activeCard.positionIndex = newIndex;
-    if (overCard) {
-      overCard.positionIndex = oldIndex;
+    // Handle based on replacement mode
+    if (replacementMode === 'INSERT') {
+      // Shift logic (Rotation)
+      if (oldIndex < newIndex) {
+        // Moving Down: Shift items in (oldIndex, newIndex] UP by -1
+        newCards.forEach(c => {
+          if (c.positionIndex > oldIndex && c.positionIndex <= newIndex) {
+            c.positionIndex -= 1;
+          }
+        });
+      } else {
+        // Moving Up: Shift items in [newIndex, oldIndex) DOWN by +1
+        newCards.forEach(c => {
+          if (c.positionIndex >= newIndex && c.positionIndex < oldIndex) {
+            c.positionIndex += 1;
+          }
+        });
+      }
+      activeCard.positionIndex = newIndex;
+    } else {
+      // SWAP logic (Default)
+      activeCard.positionIndex = newIndex;
+      if (overCard) {
+        overCard.positionIndex = oldIndex;
+      }
     }
 
     // Optimistic update
@@ -443,6 +499,25 @@ const BinderView: React.FC = () => {
             <h1 className="text-2xl font-bold text-white mb-1">{binder.name}</h1>
 
             <div className="flex items-center gap-2">
+              {/* Notification Toast */}
+              {notification && (
+                <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[100] bg-green-500 text-white px-6 py-2 rounded-full shadow-2xl flex items-center gap-2 animate-in fade-in slide-in-from-top-4">
+                  <Check className="w-4 h-4" />
+                  <span className="font-medium">{notification}</span>
+                </div>
+              )}
+
+              {/* Bulk Add Button */}
+              <Button
+                onClick={handleBulkAddClick}
+                variant="outline"
+                size="icon"
+                className="w-10 h-10 text-purple-400 bg-purple-500/10 border-purple-500/50 hover:bg-purple-500/20"
+                title="Bulk Add Cards"
+              >
+                <LayoutGrid className="w-5 h-5" />
+              </Button>
+
               {/* Gray Out Setting */}
               <Button
                 onClick={() => handleToggleGrayOut(!binder.grayOutUnpurchased)}
@@ -594,6 +669,7 @@ const BinderView: React.FC = () => {
                               setSelectedCard(slot.card);
                             } else {
                               setSelectedSlot(slot.index);
+                              setBulkMode(false);
                               setShowSearch(true);
                             }
                           }}
@@ -624,6 +700,7 @@ const BinderView: React.FC = () => {
                                 setSelectedCard(slot.card);
                               } else {
                                 setSelectedSlot(slot.index);
+                                setBulkMode(false);
                                 setShowSearch(true);
                               }
                             }}
@@ -654,6 +731,7 @@ const BinderView: React.FC = () => {
                                 setSelectedCard(slot.card);
                               } else {
                                 setSelectedSlot(slot.index);
+                                setBulkMode(false);
                                 setShowSearch(true);
                               }
                             }}
