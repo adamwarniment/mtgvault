@@ -17,16 +17,16 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const isActive = (path: string) => location.pathname === path;
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-950 via-purple-950/10 to-gray-950 flex">
+        <div className="min-h-screen bg-gradient-to-br from-gray-950 via-purple-950/10 to-gray-950 flex flex-col md:flex-row">
             {/* Animated background */}
             <div className="fixed inset-0 overflow-hidden pointer-events-none">
                 <div className="absolute top-0 left-1/4 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl animate-pulse"></div>
                 <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-pink-500/5 rounded-full blur-3xl animate-pulse delay-1000"></div>
             </div>
 
-            {/* Sidebar */}
+            {/* Desktop Sidebar */}
             <aside
-                className={`fixed left-0 top-0 h-screen bg-gray-900/95 backdrop-blur-xl border-r border-gray-800/50 z-50 transition-all duration-300 ease-in-out ${sidebarExpanded ? 'w-60' : 'w-16'
+                className={`hidden md:block fixed left-0 top-0 h-screen bg-gray-900/95 backdrop-blur-xl border-r border-gray-800/50 z-50 transition-all duration-300 ease-in-out ${sidebarExpanded ? 'w-60' : 'w-16'
                     }`}
             >
                 {/* Logo Section */}
@@ -91,9 +91,46 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 </div>
             </aside>
 
+            {/* Mobile Top Bar */}
+            <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-gray-900/95 backdrop-blur-xl border-b border-gray-800/50 z-50 px-4 flex items-center justify-between">
+                <Link to="/" className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center shadow-lg shadow-purple-500/30">
+                        <Book className="w-4 h-4 text-white" />
+                    </div>
+                    <div>
+                        <h1 className="text-base font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+                            MTG Vault
+                        </h1>
+                    </div>
+                </Link>
+                <button
+                    onClick={handleLogout}
+                    className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all"
+                >
+                    <LogOut className="w-5 h-5" />
+                </button>
+            </div>
+
+            {/* Mobile Bottom Navigation */}
+            <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-gray-900/95 backdrop-blur-xl border-t border-gray-800/50 z-50 pb-safe">
+                <div className="flex justify-around items-center p-2">
+                    <Link
+                        to="/"
+                        className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-all ${isActive('/')
+                            ? 'text-purple-400'
+                            : 'text-gray-400 hover:text-white'
+                            }`}
+                    >
+                        <Home className="w-6 h-6" />
+                        <span className="text-[10px] font-medium">Home</span>
+                    </Link>
+                    {/* Add more mobile nav items here if they exist in desktop sidebar */}
+                </div>
+            </nav>
+
             {/* Main Content */}
             <main
-                className={`flex-1 relative z-10 transition-all duration-300 ease-in-out ${sidebarExpanded ? 'ml-60' : 'ml-16'
+                className={`flex-1 relative z-10 transition-all duration-300 ease-in-out pt-16 pb-20 md:py-0 md:pb-0 ${sidebarExpanded ? 'md:ml-60' : 'md:ml-16'
                     }`}
             >
                 {children}

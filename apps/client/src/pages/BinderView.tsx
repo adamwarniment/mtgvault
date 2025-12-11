@@ -24,7 +24,6 @@ import DeleteCardModal from '../components/DeleteCardModal';
 import CardDetailsModal from '../components/CardDetailsModal';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent } from '../components/ui/Card';
-import { Switch } from '../components/ui/Switch';
 
 // --- Types ---
 interface CardType {
@@ -187,12 +186,21 @@ const BinderView: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(0);
   const [deleteConfirm, setDeleteConfirm] = useState<{ cardId: string; cardName: string } | null>(null);
 
+  // State for mobile detection
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     fetchBinder();
@@ -338,6 +346,11 @@ const BinderView: React.FC = () => {
     const newCards = binder.cards.map(c => c.id === cardId ? { ...c, isPurchased } : c);
     setBinder({ ...binder, cards: newCards });
 
+    // Also update selected card if it's the one being toggled
+    if (selectedCard && selectedCard.id === cardId) {
+      setSelectedCard({ ...selectedCard, isPurchased });
+    }
+
     try {
       await api.put(`/binders/${binder.id}/cards/${cardId}/purchased`, { isPurchased });
     } catch (error) {
@@ -398,14 +411,18 @@ const BinderView: React.FC = () => {
     return { id: `slot-${i}`, index: i, card };
   });
 
-  // Calculate pages - each spread shows 2 pages
-  const totalPages = Math.ceil(totalSlots / pageSize);
-  const totalSpreads = Math.ceil(totalPages / 2);
+  // Calculate pages/views based on mobile state
+  // On Desktop: View = Spread (2 pages). On Mobile: View = Single Page.
+  const cardsPerView = pageSize * (isMobile ? 1 : 2);
+  const totalViews = Math.ceil(slots.length / cardsPerView);
 
-  // Get slots for current spread (2 pages)
-  const leftPageStart = currentPage * pageSize * 2;
-  const leftPageSlots = slots.slice(leftPageStart, leftPageStart + pageSize);
-  const rightPageSlots = slots.slice(leftPageStart + pageSize, leftPageStart + pageSize * 2);
+  // Get current view slots
+  const currentViewStart = currentPage * cardsPerView;
+  const currentViewSlots = slots.slice(currentViewStart, currentViewStart + cardsPerView);
+
+  // For Desktop render, split into left/right pages
+  const leftPageSlots = isMobile ? [] : currentViewSlots.slice(0, pageSize);
+  const rightPageSlots = isMobile ? [] : currentViewSlots.slice(pageSize, pageSize * 2);
 
   const getGridCols = () => {
     switch (binder.layout) {
@@ -417,79 +434,74 @@ const BinderView: React.FC = () => {
 
   return (
     <Layout>
-      <div className="h-screen flex flex-col py-4 px-4">
+      <div className="h-full flex flex-col py-4 px-4 overflow-hidden">
 
         {/* Header */}
+        {/* Header */}
         <div className="mb-4 flex-shrink-0">
-          <div className="flex justify-between items-start">
-            <div>
-              <h1 className="text-2xl font-bold text-white mb-1">{binder.name}</h1>
-              <div className="flex items-center gap-4 text-sm text-gray-400">
-                <span className="flex items-center gap-2">
-                  <Layers className="w-4 h-4" />
-                  {binder.cards.length} cards
-                </span>
-                <span>Page {currentPage + 1} of {totalSpreads}</span>
-                <span className="w-px h-6 bg-gray-700 mx-1" />
+          <div className="flex justify-between items-start gap-4 mb-2">
+            <h1 className="text-2xl font-bold text-white mb-1">{binder.name}</h1>
 
-                <div className="flex items-center gap-2">
-                  {/* Total Value Pill */}
-                  <div className="flex items-center gap-2 px-3 py-1 bg-gray-900/40 border border-gray-700/50 rounded-full shadow-inner">
-                    <span className="text-xs text-gray-500 font-medium uppercase tracking-wider">Total</span>
-                    <span className="text-white font-mono font-bold">
-                      ${totalValue.toFixed(2)}
-                    </span>
-                  </div>
-
-                  {/* Purchased & Missing Breakdown */}
-                  <div className="flex items-center rounded-full bg-gray-900/40 border border-gray-700/50 overflow-hidden shadow-inner">
-                    <div className="flex items-center gap-1.5 px-3 py-1 border-r border-gray-700/50 bg-green-500/5">
-                      <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
-                      <span className="text-green-400 font-mono text-xs font-medium">
-                        ${purchasedValue.toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1.5 px-3 py-1 bg-red-500/5">
-                      <div className="w-1.5 h-1.5 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]" />
-                      <span className="text-red-400 font-mono text-xs font-medium">
-                        ${missingValue.toFixed(2)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
               {/* Gray Out Setting */}
-              <div className="flex items-center gap-2 bg-gray-800/50 px-3 py-1.5 rounded-lg border border-gray-700">
-                <Switch
-                  checked={binder.grayOutUnpurchased}
-                  onCheckedChange={handleToggleGrayOut}
-                  id="gray-out-mode"
-                />
-                <label htmlFor="gray-out-mode" className="text-sm text-gray-300 cursor-pointer select-none flex items-center gap-2">
-                  {binder.grayOutUnpurchased ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  Gray out unpurchased
-                </label>
-              </div>
+              <Button
+                onClick={() => handleToggleGrayOut(!binder.grayOutUnpurchased)}
+                variant="outline"
+                size="icon"
+                className={`w-10 h-10 transition-all ${binder.grayOutUnpurchased ? 'text-gray-400 bg-gray-800/50' : 'text-purple-400 bg-purple-500/10 border-purple-500/50'}`}
+                title={binder.grayOutUnpurchased ? "Show all in color" : "Gray out unpurchased"}
+              >
+                {binder.grayOutUnpurchased ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </Button>
 
               <Button
                 onClick={() => setIsEditMode(!isEditMode)}
                 variant={isEditMode ? "default" : "outline"}
-                className="gap-2"
+                size="icon"
+                className="w-10 h-10"
+                title={isEditMode ? "Finish Editing" : "Edit Binder"}
               >
                 {isEditMode ? (
-                  <>
-                    <Save className="w-4 h-4" />
-                    Done Editing
-                  </>
+                  <Save className="w-5 h-5" />
                 ) : (
-                  <>
-                    <Edit className="w-4 h-4" />
-                    Edit Binder
-                  </>
+                  <Edit className="w-5 h-5" />
                 )}
               </Button>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-4 text-sm text-gray-400">
+            <span className="flex items-center gap-2">
+              <Layers className="w-4 h-4" />
+              {binder.cards.length} cards
+            </span>
+            <span>Page {currentPage + 1} of {totalViews}</span>
+            <span className="w-px h-6 bg-gray-700 mx-1 hidden md:block" />
+
+            <div className="flex items-center gap-2">
+              {/* Total Value Pill */}
+              <div className="flex items-center gap-2 px-3 py-1 bg-gray-900/40 border border-gray-700/50 rounded-full shadow-inner">
+                <span className="text-xs text-gray-500 font-medium uppercase tracking-wider">Total</span>
+                <span className="text-white font-mono font-bold">
+                  ${totalValue.toFixed(2)}
+                </span>
+              </div>
+
+              {/* Purchased & Missing Breakdown */}
+              <div className="flex items-center rounded-full bg-gray-900/40 border border-gray-700/50 overflow-hidden shadow-inner">
+                <div className="flex items-center gap-1.5 px-3 py-1 border-r border-gray-700/50 bg-green-500/5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
+                  <span className="text-green-400 font-mono text-xs font-medium">
+                    ${purchasedValue.toFixed(2)}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 px-3 py-1 bg-red-500/5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]" />
+                  <span className="text-red-400 font-mono text-xs font-medium">
+                    ${missingValue.toFixed(2)}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -533,31 +545,31 @@ const BinderView: React.FC = () => {
         {/* Binder Spread Container */}
         <div className="relative flex-1 flex items-center justify-center">
           {/* Page Navigation */}
-          <div className="absolute left-4 top-1/2 -translate-y-1/2 z-10">
+          <div className="absolute left-0 md:left-4 top-1/2 -translate-y-1/2 z-20">
             <Button
               onClick={() => setCurrentPage(Math.max(0, currentPage - 1))}
               disabled={currentPage === 0}
               variant="ghost"
               size="icon"
-              className="w-12 h-12 rounded-full"
+              className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gray-900/50 backdrop-blur-sm border border-gray-700/50 text-white"
             >
               <ChevronLeft className="w-6 h-6" />
             </Button>
           </div>
-          <div className="absolute right-4 top-1/2 -translate-y-1/2 z-10">
+          <div className="absolute right-0 md:right-4 top-1/2 -translate-y-1/2 z-20">
             <Button
-              onClick={() => setCurrentPage(Math.min(totalSpreads - 1, currentPage + 1))}
-              disabled={currentPage >= totalSpreads - 1}
+              onClick={() => setCurrentPage(Math.min(totalViews - 1, currentPage + 1))}
+              disabled={currentPage >= totalViews - 1}
               variant="ghost"
               size="icon"
-              className="w-12 h-12 rounded-full"
+              className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gray-900/50 backdrop-blur-sm border border-gray-700/50 text-white"
             >
               <ChevronRight className="w-6 h-6" />
             </Button>
           </div>
 
           {/* Binder Pages */}
-          <div className="flex gap-1 justify-center perspective-1000">
+          <div className={`flex gap-1 justify-center w-full max-w-full px-2 md:px-0 ${isMobile ? '' : 'perspective-1000'}`}>
             <DndContext
               sensors={sensors}
               collisionDetection={closestCenter}
@@ -565,72 +577,95 @@ const BinderView: React.FC = () => {
               onDragEnd={handleDragEnd}
             >
               <SortableContext items={slots.map((s) => s.id)} strategy={rectSortingStrategy}>
-                {/* Left Page */}
-                <div className="relative bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-l-2xl shadow-2xl p-6 border-2 border-r-0 border-gray-700"
-                  style={{ width: '450px' }}>
-                  {/* Page texture overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-yellow-50/[0.02] to-transparent rounded-l-2xl pointer-events-none"></div>
-
-
-
-                  <div className={`grid ${getGridCols()} gap-2 relative z-10`}>
-                    {leftPageSlots.map((slot) => (
-                      <SortableCard
-                        key={slot.id}
-                        id={slot.id}
-                        index={slot.index}
-                        card={slot.card}
-                        isEditMode={isEditMode}
-                        onClick={() => {
-                          if (slot.card) {
-                            setSelectedCard(slot.card);
-                          } else {
-                            setSelectedSlot(slot.index);
-                            setShowSearch(true);
-                          }
-                        }}
-                        onRemove={() => slot.card && handleRemoveCard(slot.card.id, slot.card.name)}
-                        grayOutUnpurchased={binder.grayOutUnpurchased}
-                        onTogglePurchased={(isPurchased) => slot.card && handleTogglePurchased(slot.card.id, isPurchased)}
-                      />
-                    ))}
+                {isMobile ? (
+                  // Mobile Single Page View
+                  <div className="relative bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-2xl shadow-2xl p-4 border-2 border-gray-700 w-full max-w-[400px]">
+                    <div className="absolute inset-0 bg-gradient-to-br from-yellow-50/[0.02] to-transparent rounded-2xl pointer-events-none"></div>
+                    <div className={`grid ${getGridCols()} gap-2 relative z-10`}>
+                      {currentViewSlots.map((slot) => (
+                        <SortableCard
+                          key={slot.id}
+                          id={slot.id}
+                          index={slot.index}
+                          card={slot.card}
+                          isEditMode={isEditMode}
+                          onClick={() => {
+                            if (slot.card) {
+                              setSelectedCard(slot.card);
+                            } else {
+                              setSelectedSlot(slot.index);
+                              setShowSearch(true);
+                            }
+                          }}
+                          onRemove={() => slot.card && handleRemoveCard(slot.card.id, slot.card.name)}
+                          grayOutUnpurchased={binder.grayOutUnpurchased}
+                          onTogglePurchased={(isPurchased) => slot.card && handleTogglePurchased(slot.card.id, isPurchased)}
+                        />
+                      ))}
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  // Desktop Spread View
+                  <>
+                    <div className="relative bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-l-2xl shadow-2xl p-6 border-2 border-r-0 border-gray-700"
+                      style={{ width: '450px' }}>
+                      <div className="absolute inset-0 bg-gradient-to-br from-yellow-50/[0.02] to-transparent rounded-l-2xl pointer-events-none"></div>
 
-                {/* Spine/Binding */}
-                <div className="w-px bg-gray-600"></div>
+                      <div className={`grid ${getGridCols()} gap-2 relative z-10`}>
+                        {leftPageSlots.map((slot) => (
+                          <SortableCard
+                            key={slot.id}
+                            id={slot.id}
+                            index={slot.index}
+                            card={slot.card}
+                            isEditMode={isEditMode}
+                            onClick={() => {
+                              if (slot.card) {
+                                setSelectedCard(slot.card);
+                              } else {
+                                setSelectedSlot(slot.index);
+                                setShowSearch(true);
+                              }
+                            }}
+                            onRemove={() => slot.card && handleRemoveCard(slot.card.id, slot.card.name)}
+                            grayOutUnpurchased={binder.grayOutUnpurchased}
+                            onTogglePurchased={(isPurchased) => slot.card && handleTogglePurchased(slot.card.id, isPurchased)}
+                          />
+                        ))}
+                      </div>
+                    </div>
 
-                {/* Right Page */}
-                <div className="relative bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-r-2xl shadow-2xl p-6 border-2 border-l-0 border-gray-700"
-                  style={{ width: '450px' }}>
-                  {/* Page texture overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-yellow-50/[0.02] to-transparent rounded-r-2xl pointer-events-none"></div>
+                    <div className="w-px bg-gray-600"></div>
 
+                    <div className="relative bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-r-2xl shadow-2xl p-6 border-2 border-l-0 border-gray-700"
+                      style={{ width: '450px' }}>
+                      <div className="absolute inset-0 bg-gradient-to-br from-yellow-50/[0.02] to-transparent rounded-r-2xl pointer-events-none"></div>
 
-
-                  <div className={`grid ${getGridCols()} gap-2 relative z-10`}>
-                    {rightPageSlots.map((slot) => (
-                      <SortableCard
-                        key={slot.id}
-                        id={slot.id}
-                        index={slot.index}
-                        card={slot.card}
-                        isEditMode={isEditMode}
-                        onClick={() => {
-                          if (slot.card) {
-                            setSelectedCard(slot.card);
-                          } else {
-                            setSelectedSlot(slot.index);
-                            setShowSearch(true);
-                          }
-                        }}
-                        onRemove={() => slot.card && handleRemoveCard(slot.card.id, slot.card.name)}
-                        grayOutUnpurchased={binder.grayOutUnpurchased}
-                        onTogglePurchased={(isPurchased) => slot.card && handleTogglePurchased(slot.card.id, isPurchased)}
-                      />
-                    ))}
-                  </div>
-                </div>
+                      <div className={`grid ${getGridCols()} gap-2 relative z-10`}>
+                        {rightPageSlots.map((slot) => (
+                          <SortableCard
+                            key={slot.id}
+                            id={slot.id}
+                            index={slot.index}
+                            card={slot.card}
+                            isEditMode={isEditMode}
+                            onClick={() => {
+                              if (slot.card) {
+                                setSelectedCard(slot.card);
+                              } else {
+                                setSelectedSlot(slot.index);
+                                setShowSearch(true);
+                              }
+                            }}
+                            onRemove={() => slot.card && handleRemoveCard(slot.card.id, slot.card.name)}
+                            grayOutUnpurchased={binder.grayOutUnpurchased}
+                            onTogglePurchased={(isPurchased) => slot.card && handleTogglePurchased(slot.card.id, isPurchased)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
               </SortableContext>
               <DragOverlay>
                 {activeId ? (
@@ -658,6 +693,7 @@ const BinderView: React.FC = () => {
           card={selectedCard}
           onClose={() => setSelectedCard(null)}
           onRefresh={handleRefreshPrice}
+          onTogglePurchased={(isPurchased) => selectedCard && handleTogglePurchased(selectedCard.id, isPurchased)}
         />
 
         <DeleteCardModal
