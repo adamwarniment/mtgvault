@@ -381,6 +381,12 @@ const BinderView: React.FC = () => {
     }
   };
 
+  const totalValue = binder.cards.reduce((sum, card) => sum + (card.priceUsd || 0), 0);
+  const purchasedValue = binder.cards
+    .filter(card => card.isPurchased)
+    .reduce((sum, card) => sum + (card.priceUsd || 0), 0);
+  const missingValue = totalValue - purchasedValue;
+
   const pageSize = getGridSize();
   const totalSlots = Math.max(
     Math.ceil((Math.max(...binder.cards.map((c) => c.positionIndex), -1) + 1) / pageSize) * pageSize,
@@ -424,6 +430,33 @@ const BinderView: React.FC = () => {
                   {binder.cards.length} cards
                 </span>
                 <span>Page {currentPage + 1} of {totalSpreads}</span>
+                <span className="w-px h-6 bg-gray-700 mx-1" />
+
+                <div className="flex items-center gap-2">
+                  {/* Total Value Pill */}
+                  <div className="flex items-center gap-2 px-3 py-1 bg-gray-900/40 border border-gray-700/50 rounded-full shadow-inner">
+                    <span className="text-xs text-gray-500 font-medium uppercase tracking-wider">Total</span>
+                    <span className="text-white font-mono font-bold">
+                      ${totalValue.toFixed(2)}
+                    </span>
+                  </div>
+
+                  {/* Purchased & Missing Breakdown */}
+                  <div className="flex items-center rounded-full bg-gray-900/40 border border-gray-700/50 overflow-hidden shadow-inner">
+                    <div className="flex items-center gap-1.5 px-3 py-1 border-r border-gray-700/50 bg-green-500/5">
+                      <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
+                      <span className="text-green-400 font-mono text-xs font-medium">
+                        ${purchasedValue.toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 px-3 py-1 bg-red-500/5">
+                      <div className="w-1.5 h-1.5 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]" />
+                      <span className="text-red-400 font-mono text-xs font-medium">
+                        ${missingValue.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
             <div className="flex items-center gap-4">

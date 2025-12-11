@@ -1,6 +1,7 @@
 import React from 'react';
-import { X, RefreshCw, Loader2 } from 'lucide-react';
+import { X, RefreshCw, Loader2, ExternalLink } from 'lucide-react';
 import { Button } from './ui/Button';
+import manapoolLogo from '../assets/manapool-logo.png';
 
 interface CardDetailsModalProps {
     card: any;
@@ -80,6 +81,22 @@ const CardDetailsModal: React.FC<CardDetailsModalProps> = ({ card, onClose, onRe
                             <p className="text-xl font-bold text-gray-500 font-mono">--</p>
                         )}
                     </div>
+
+                    <a
+                        href={`https://manapool.com/card/${card.set?.toLowerCase()}/${card.collectorNumber}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-3 p-3 mb-6 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-blue-500/50 transition-all group"
+                    >
+                        <div className="w-10 h-10 rounded-lg bg-black/40 p-1.5 flex items-center justify-center border border-white/5">
+                            <img src={manapoolLogo} alt="Mana Pool" className="w-full h-full object-contain" />
+                        </div>
+                        <div className="flex-1">
+                            <p className="text-white font-medium text-sm group-hover:text-blue-400 transition-colors">Buy on Mana Pool</p>
+                            <p className="text-gray-400 text-xs">View current listings</p>
+                        </div>
+                        <ExternalLink className="w-4 h-4 text-gray-500 group-hover:text-blue-400 transition-colors" />
+                    </a>
 
                     <div className="flex-1 border-t border-white/10 pt-6">
                         <div className="p-4 rounded-xl bg-white/5 border border-white/5">
