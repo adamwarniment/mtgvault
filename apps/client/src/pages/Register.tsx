@@ -31,11 +31,13 @@ const Register: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-950 via-purple-950/20 to-gray-950 p-4">
+        <div className="min-h-screen flex items-center justify-center p-4" style={{
+            background: `linear-gradient(to bottom right, var(--bg-primary), var(--gradient-via), var(--bg-primary))`
+        }}>
             {/* Animated background elements */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse"></div>
-                <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
+                <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full blur-3xl animate-pulse" style={{ backgroundColor: 'var(--orb-1)' }}></div>
+                <div className="absolute bottom-1/4 right-1/4 w-96 h-96 rounded-full blur-3xl animate-pulse delay-1000" style={{ backgroundColor: 'var(--orb-2)' }}></div>
             </div>
 
             <div className="w-full max-w-md relative z-10">
@@ -47,7 +49,7 @@ const Register: React.FC = () => {
                     <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent mb-2">
                         MTG Vault
                     </h1>
-                    <p className="text-gray-400 flex items-center justify-center gap-2">
+                    <p className="flex items-center justify-center gap-2" style={{ color: 'var(--text-secondary)' }}>
                         <Sparkles className="w-4 h-4" />
                         Your Premium Card Collection
                     </p>
@@ -69,7 +71,7 @@ const Register: React.FC = () => {
                         )}
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div className="space-y-2">
-                                <label className="text-sm font-medium text-gray-300">Email</label>
+                                <label className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Email</label>
                                 <Input
                                     type="email"
                                     placeholder="you@example.com"
@@ -80,7 +82,7 @@ const Register: React.FC = () => {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-sm font-medium text-gray-300">Password</label>
+                                <label className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Password</label>
                                 <Input
                                     type="password"
                                     placeholder="••••••••"
@@ -90,7 +92,7 @@ const Register: React.FC = () => {
                                     disabled={loading}
                                     minLength={6}
                                 />
-                                <p className="text-xs text-gray-500">Must be at least 6 characters</p>
+                                <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Must be at least 6 characters</p>
                             </div>
                             <Button
                                 type="submit"
@@ -100,7 +102,7 @@ const Register: React.FC = () => {
                                 {loading ? 'Creating account...' : 'Create Account'}
                             </Button>
                         </form>
-                        <div className="mt-6 text-center text-sm text-gray-400">
+                        <div className="mt-6 text-center text-sm" style={{ color: 'var(--text-secondary)' }}>
                             Already have an account?{' '}
                             <Link to="/login" className="text-purple-400 hover:text-purple-300 font-medium transition-colors">
                                 Sign in
@@ -109,7 +111,7 @@ const Register: React.FC = () => {
                     </CardContent>
                 </Card>
 
-                <p className="text-center text-xs text-gray-500 mt-6">
+                <p className="text-center text-xs mt-6" style={{ color: 'var(--text-tertiary)' }}>
                     By creating an account, you agree to keep your collection awesome
                 </p>
             </div>

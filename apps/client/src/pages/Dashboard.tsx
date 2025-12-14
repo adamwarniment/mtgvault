@@ -58,8 +58,8 @@ const Dashboard: React.FC = () => {
             <div className="max-w-7xl mx-auto px-6 py-12">
                 {/* Header */}
                 <div className="mb-12">
-                    <h1 className="text-4xl font-bold text-white mb-3">My Binders</h1>
-                    <p className="text-gray-400">Organize and manage your Magic: The Gathering collection</p>
+                    <h1 className="text-4xl font-bold mb-3" style={{ color: 'var(--text-primary)' }}>My Binders</h1>
+                    <p style={{ color: 'var(--text-secondary)' }}>Organize and manage your Magic: The Gathering collection</p>
                 </div>
 
                 {/* Quick Action Card */}
@@ -93,8 +93,8 @@ const Dashboard: React.FC = () => {
                             <div className="w-16 h-16 rounded-2xl bg-gray-800 flex items-center justify-center mx-auto mb-4">
                                 <BookOpen className="w-8 h-8 text-gray-600" />
                             </div>
-                            <h3 className="text-xl font-semibold text-white mb-2">No binders yet</h3>
-                            <p className="text-gray-400 mb-6">Create your first binder to start organizing your collection</p>
+                            <h3 className="text-xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>No binders yet</h3>
+                            <p className="mb-6" style={{ color: 'var(--text-secondary)' }}>Create your first binder to start organizing your collection</p>
                             <Button onClick={() => setShowModal(true)}>
                                 <Plus className="w-4 h-4 mr-2" />
                                 Create First Binder

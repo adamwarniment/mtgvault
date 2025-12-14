@@ -22,7 +22,7 @@ export const register = async (req: Request, res: Response) => {
         });
 
         const token = generateToken(user.id);
-        res.status(201).json({ token, user: { id: user.id, email: user.email } });
+        res.status(201).json({ token, user: { id: user.id, email: user.email, themeMode: user.themeMode } });
     } catch (error) {
         res.status(500).json({ error: 'Something went wrong' });
     }
@@ -43,7 +43,7 @@ export const login = async (req: Request, res: Response) => {
         }
 
         const token = generateToken(user.id);
-        res.json({ token, user: { id: user.id, email: user.email } });
+        res.json({ token, user: { id: user.id, email: user.email, themeMode: user.themeMode } });
     } catch (error) {
         res.status(500).json({ error: 'Something went wrong' });
     }

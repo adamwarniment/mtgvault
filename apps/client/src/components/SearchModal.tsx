@@ -16,7 +16,7 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, onSelectCard
     const [results, setResults] = React.useState<any[]>([]);
     const [loading, setLoading] = React.useState(false);
     const [loadingMore, setLoadingMore] = React.useState(false);
-    const [showUniquePrints, setShowUniquePrints] = React.useState(true);
+    const [uniqueArtsOnly, setUniqueArtsOnly] = React.useState(false);
     const [page, setPage] = React.useState(1);
     const [hasMore, setHasMore] = React.useState(false);
 
@@ -32,10 +32,10 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, onSelectCard
         setHasMore(false);
 
         try {
-            // Build search query with optional unique prints filter
+            // Build search query with optional unique arts filter
             let searchQuery = query;
-            if (showUniquePrints) {
-                searchQuery = `${query} (game:paper) unique:prints prefer:best`;
+            if (uniqueArtsOnly) {
+                searchQuery = `(${query}) (is:fullart or frame:showcase) unique:art order:rarity`;
             }
 
             const response = await api.get('/scryfall/cards', { params: { q: searchQuery, page: 1 } });
@@ -54,8 +54,8 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, onSelectCard
         setLoadingMore(true);
         try {
             let searchQuery = query;
-            if (showUniquePrints) {
-                searchQuery = `${query} (game:paper) unique:prints prefer:best`;
+            if (uniqueArtsOnly) {
+                searchQuery = `(${query}) (is:fullart or frame:showcase) unique:art order:rarity`;
             }
 
             const nextPage = page + 1;
@@ -139,23 +139,35 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, onSelectCard
 
                             {/* Filter Options */}
                             <div className="flex items-center gap-2 px-1">
-                                <label className="flex items-center gap-2 cursor-pointer group select-none">
-                                    <input
-                                        type="checkbox"
-                                        checked={showUniquePrints}
-                                        onChange={(e) => setShowUniquePrints(e.target.checked)}
-                                        className="w-3.5 h-3.5 rounded border-gray-700 bg-gray-800 text-purple-600 focus:ring-1 focus:ring-purple-500 focus:ring-offset-0 cursor-pointer"
-                                    />
-                                    <span className="text-xs text-gray-300 group-hover:text-white transition-colors">
-                                        Show unique variations only
-                                    </span>
-                                </label>
+                                <button
+                                    type="button"
+                                    onClick={() => setUniqueArtsOnly(!uniqueArtsOnly)}
+                                    className={`
+                                        flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium
+                                        transition-all duration-200 border
+                                        ${uniqueArtsOnly
+                                            ? 'bg-purple-500/20 border-purple-500/50 text-purple-300 hover:bg-purple-500/30'
+                                            : 'bg-gray-800/50 border-gray-700 text-gray-400 hover:bg-gray-800 hover:text-gray-300'
+                                        }
+                                    `}
+                                >
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        viewBox="0 0 20 20"
+                                        fill="currentColor"
+                                        className="w-3.5 h-3.5"
+                                    >
+                                        <path d="M10.75 2.75a.75.75 0 00-1.5 0v8.614L6.295 8.235a.75.75 0 10-1.09 1.03l4.25 4.5a.75.75 0 001.09 0l4.25-4.5a.75.75 0 00-1.09-1.03l-2.955 3.129V2.75z" />
+                                        <path d="M3.5 12.75a.75.75 0 00-1.5 0v2.5A2.75 2.75 0 004.75 18h10.5A2.75 2.75 0 0018 15.25v-2.5a.75.75 0 00-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5z" />
+                                    </svg>
+                                    Unique Arts Only
+                                </button>
                                 <div className="relative group">
                                     <span className="text-[10px] text-gray-500 cursor-help border border-gray-700 rounded-full w-3.5 h-3.5 flex items-center justify-center">?</span>
                                     <div className="absolute left-0 top-6 hidden group-hover:block bg-gray-800 border border-gray-700 rounded-lg p-2 w-56 shadow-xl z-10">
                                         <p className="text-[10px] text-gray-300">
-                                            When enabled, searches for unique card variations (different art, special editions)
-                                            from paper Magic sets, showing the best version of each.
+                                            When enabled, searches for unique full-art or showcase frame cards,
+                                            sorted by rarity. Wraps your search and filters for special card art variations.
                                         </p>
                                     </div>
                                 </div>
@@ -184,9 +196,9 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, onSelectCard
                                         <p className="text-sm text-gray-400">
                                             Found {results.length} {results.length === 1 ? 'card' : 'cards'}
                                         </p>
-                                        {showUniquePrints && (
+                                        {uniqueArtsOnly && (
                                             <span className="text-xs text-purple-400 bg-purple-500/10 px-2 py-1 rounded-md">
-                                                Unique prints only
+                                                Unique Arts Only
                                             </span>
                                         )}
                                     </div>
