@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import {
   DndContext,
   closestCenter,
+  TouchSensor,
+  MouseSensor,
   KeyboardSensor,
-  PointerSensor,
   useSensor,
   useSensors,
   DragOverlay,
@@ -23,7 +24,7 @@ import SearchModal from '../components/SearchModal';
 import DeleteCardModal from '../components/DeleteCardModal';
 import CardDetailsModal from '../components/CardDetailsModal';
 import { Button } from '../components/ui/Button';
-import { Card, CardContent } from '../components/ui/Card';
+// import { Card, CardContent } from '../components/ui/Card';
 
 // --- Types ---
 interface CardType {
@@ -107,7 +108,7 @@ const SortableCard = ({
     <div
       ref={setNodeRef}
       style={style}
-      className={`relative aspect-[63/88] rounded-lg border-2 group ${isEditMode && card ? 'cursor-grab active:cursor-grabbing' : ''
+      className={`relative aspect-[63/88] rounded-lg border-2 group touch-manipulation ${isEditMode && card ? 'cursor-grab active:cursor-grabbing touch-none' : ''
         } ${!card
           ? 'border-dashed border-yellow-900/30 hover:border-yellow-600/50 flex items-center justify-center cursor-pointer bg-gradient-to-br from-yellow-50/5 to-yellow-100/5 hover:from-yellow-50/10 hover:to-yellow-100/10'
           : 'border-yellow-900/20 hover:border-yellow-600/40 shadow-md'
@@ -142,7 +143,7 @@ const SortableCard = ({
             <button
               onMouseDown={handleDeleteMouseDown}
               onTouchStart={handleDeleteTouchStart}
-              className="absolute top-1 right-1 bg-red-600 text-white p-1.5 rounded-full hover:bg-red-700 shadow-xl z-50 transition-all hover:scale-110"
+              className="absolute top-1 right-1 bg-red-600/90 text-white p-1.5 rounded-full hover:bg-red-700 shadow-xl z-50 transition-all hover:scale-110 backdrop-blur-sm"
               style={{ pointerEvents: 'auto' }}
             >
               <Trash2 className="w-3.5 h-3.5" />
@@ -188,21 +189,52 @@ const BinderView: React.FC = () => {
   const [bulkMode, setBulkMode] = useState(false);
   const [notification, setNotification] = useState<string | null>(null);
 
-  // State for mobile detection
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  // State for mobile/single-view detection (increased breakpoint for better portrait tablet support)
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
 
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(MouseSensor, {
+      activationConstraint: {
+        distance: 10,
+      },
+    }),
+    useSensor(TouchSensor, {
+      // Press delay of 250ms, with tolerance of 5px of movement
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5,
+      },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
 
   useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    const handleResize = () => setIsMobile(window.innerWidth < 1024);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // --- Dynamic Sizing Logic ---
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setContainerSize({
+          width: entry.contentRect.width,
+          height: entry.contentRect.height,
+        });
+      }
+    });
+
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, [binder]);
 
   useEffect(() => {
     fetchBinder();
@@ -370,8 +402,7 @@ const BinderView: React.FC = () => {
     try {
       const moves = newCards.map(c => ({ cardId: c.id, newPosition: c.positionIndex }));
       console.log('Sending reorder request:', moves);
-      const response = await api.put(`/binders/${binder.id}/reorder`, { moves });
-      console.log('Reorder response:', response.status);
+      await api.put(`/binders/${binder.id}/reorder`, { moves });
     } catch (error: any) {
       console.error("Failed to save order:", error.response?.data || error.message);
       // Revert on error
@@ -488,17 +519,56 @@ const BinderView: React.FC = () => {
     }
   };
 
+  const getAspectRatio = () => {
+    // Card ratio ~0.716 (63/88)
+    const cardRatio = 63 / 88;
+    let baseRatio = 0.716;
+
+    switch (binder.layout) {
+      case 'GRID_2x2': baseRatio = (2 / 2) * cardRatio; break;
+      case 'GRID_4x3': baseRatio = (4 / 3) * cardRatio; break;
+      case 'GRID_3x3': default: baseRatio = (3 / 3) * cardRatio; break;
+    }
+
+    // Adjust for spread view (2 pages) vs single view
+    return isMobile ? baseRatio : baseRatio * 2.02; // 2.02 to account for gap
+  };
+
+  const getAspectStyle = () => {
+    const ratio = getAspectRatio();
+    const containerRatio = containerSize.width / containerSize.height;
+
+    // If container is wider than binder: limiting factor is height -> h-full
+    // If binder is wider than container: limiting factor is width -> w-full
+    // We default to w-full if measurement isn't ready
+
+    // Default mobile behavior (portrait) often prefers height to fit if tall screen, width if wide.
+    // The logic holds for both: maximize size within box.
+
+    // However, specifically on mobile, existing logic was 'h-full w-auto'.
+    // If we rely purely on ratio comparison, it should be correct.
+
+    if (!containerSize.width || !containerSize.height) return { aspectRatio: ratio, width: '100%' };
+
+    const isContainerWider = containerRatio > ratio;
+
+    return {
+      aspectRatio: ratio,
+      width: isContainerWider ? 'auto' : '100%',
+      height: isContainerWider ? '100%' : 'auto',
+    };
+  };
+
   return (
     <Layout>
-      <div className="h-full flex flex-col py-4 px-4 overflow-hidden">
+      <div className="h-full flex flex-col landscape:flex-row py-2 px-2 md:py-4 md:px-4 overflow-hidden max-h-full">
 
-        {/* Header */}
-        {/* Header */}
-        <div className="mb-4 flex-shrink-0">
-          <div className="flex justify-between items-start gap-4 mb-2">
-            <h1 className="text-2xl font-bold text-white mb-1">{binder.name}</h1>
+        {/* Header / Sidebar (Landscape) */}
+        <div className="mb-4 flex-shrink-0 landscape:mb-0 landscape:w-56 landscape:h-full landscape:flex landscape:flex-col landscape:justify-center landscape:mr-4 landscape:border-r landscape:border-gray-800/50 landscape:pr-4 landscape:overflow-y-auto custom-scrollbar">
+          <div className="flex justify-between items-start gap-2 mb-2 landscape:flex-col landscape:items-center landscape:w-full landscape:mb-6 landscape:gap-4">
+            <h1 className="text-2xl font-bold text-white mb-1 landscape:text-center landscape:mb-2">{binder.name}</h1>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 landscape:justify-center landscape:flex-wrap landscape:gap-3">
               {/* Notification Toast */}
               {notification && (
                 <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[100] bg-green-500 text-white px-6 py-2 rounded-full shadow-2xl flex items-center gap-2 animate-in fade-in slide-in-from-top-4">
@@ -545,106 +615,95 @@ const BinderView: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-4 text-sm text-gray-400">
-            <span className="flex items-center gap-2">
-              <Layers className="w-4 h-4" />
-              {binder.cards.length} cards
-            </span>
-            <span>Page {currentPage + 1} of {totalViews}</span>
-            <span className="w-px h-6 bg-gray-700 mx-1 hidden md:block" />
-
-            <div className="flex items-center gap-2">
-              {/* Total Value Pill */}
-              <div className="flex items-center gap-2 px-3 py-1 bg-gray-900/40 border border-gray-700/50 rounded-full shadow-inner">
-                <span className="text-xs text-gray-500 font-medium uppercase tracking-wider">Total</span>
-                <span className="text-white font-mono font-bold">
-                  ${totalValue.toFixed(2)}
+          <div className="flex flex-wrap items-center gap-4 text-sm text-gray-400 h-8 landscape:h-auto landscape:w-full landscape:flex-col landscape:items-stretch landscape:gap-6">
+            {isEditMode ? (
+              // EDIT MODE CONTROLS (Replaces Stats)
+              <div className="flex items-center gap-4 w-full animate-in fade-in zoom-in-95 duration-200 landscape:flex-col landscape:items-center landscape:text-center landscape:gap-3">
+                <span className="text-sm font-medium text-gray-300">Drag Mode</span>
+                <div className="flex bg-gray-800 rounded-lg p-0.5 border border-gray-700/50">
+                  <button
+                    onClick={() => setReplacementMode('SWAP')}
+                    className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${replacementMode === 'SWAP'
+                      ? 'bg-purple-600 text-white shadow-lg'
+                      : 'text-gray-400 hover:text-white'
+                      }`}
+                  >
+                    Swap
+                  </button>
+                  <button
+                    onClick={() => setReplacementMode('INSERT')}
+                    className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${replacementMode === 'INSERT'
+                      ? 'bg-purple-600 text-white shadow-lg'
+                      : 'text-gray-400 hover:text-white'
+                      }`}
+                  >
+                    Insert
+                  </button>
+                </div>
+                <span className="text-xs text-gray-500 hidden sm:inline landscape:inline ml-auto landscape:ml-0">
+                  {replacementMode === 'SWAP' ? 'Swap positions' : 'Shift others'}
                 </span>
               </div>
-
-              {/* Purchased & Missing Breakdown */}
-              <div className="flex items-center rounded-full bg-gray-900/40 border border-gray-700/50 overflow-hidden shadow-inner">
-                <div className="flex items-center gap-1.5 px-3 py-1 border-r border-gray-700/50 bg-green-500/5">
-                  <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
-                  <span className="text-green-400 font-mono text-xs font-medium">
-                    ${purchasedValue.toFixed(2)}
+            ) : (
+              // NORMAL STATS
+              <div className="w-full flex items-center gap-4 animate-in fade-in zoom-in-95 duration-200 landscape:flex-col landscape:items-center landscape:gap-3">
+                <div className="flex items-center gap-4 landscape:flex-col landscape:gap-1">
+                  <span className="flex items-center gap-2">
+                    <Layers className="w-4 h-4" />
+                    {binder.cards.length} cards
                   </span>
                 </div>
-                <div className="flex items-center gap-1.5 px-3 py-1 bg-red-500/5">
-                  <div className="w-1.5 h-1.5 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]" />
-                  <span className="text-red-400 font-mono text-xs font-medium">
-                    ${missingValue.toFixed(2)}
-                  </span>
+
+                <span className="w-px h-6 bg-gray-700 mx-1 hidden md:block landscape:hidden" />
+                <div className="w-full h-px bg-gray-800 my-1 hidden landscape:block" />
+
+                <div className="flex items-center gap-2 ml-auto md:ml-0 landscape:w-full landscape:flex-col landscape:gap-3">
+                  {/* Total Value Pill */}
+                  <div className="flex items-center gap-2 px-3 py-1 bg-gray-900/40 border border-gray-700/50 rounded-full shadow-inner landscape:w-full landscape:justify-center">
+                    <span className="text-xs text-gray-500 font-medium uppercase tracking-wider hidden sm:inline landscape:inline">Total</span>
+                    <span className="text-white font-mono font-bold">
+                      ${totalValue.toFixed(2)}
+                    </span>
+                  </div>
+
+                  {/* Purchased & Missing Breakdown */}
+                  <div className="flex items-center rounded-full bg-gray-900/40 border border-gray-700/50 overflow-hidden shadow-inner landscape:w-full landscape:justify-center">
+                    <div className="flex items-center gap-1.5 px-3 py-1 border-r border-gray-700/50 bg-green-500/5 landscape:flex-1 landscape:justify-center">
+                      <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
+                      <span className="text-green-400 font-mono text-xs font-medium">
+                        ${purchasedValue.toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 px-3 py-1 bg-red-500/5 landscape:flex-1 landscape:justify-center">
+                      <div className="w-1.5 h-1.5 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]" />
+                      <span className="text-red-400 font-mono text-xs font-medium">
+                        ${missingValue.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
+            )}
+          </div>
+
+          {/* Landscape Navigation (Sidebar) */}
+          <div className="hidden landscape:flex w-full justify-center mt-auto pt-4 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-150">
+            <div className="flex items-center gap-2 bg-gray-900/40 p-1 rounded-full border border-gray-700/50 shadow-inner">
+              <Button onClick={() => setCurrentPage(Math.max(0, currentPage - 1))} disabled={currentPage === 0} variant="ghost" size="icon" className="w-8 h-8 rounded-full text-white hover:bg-white/10 hover:text-purple-400 transition-colors"><ChevronLeft className="w-4 h-4" /></Button>
+              <span className="text-xs font-medium text-gray-400 tabular-nums px-2 min-w-[3rem] text-center">Page {currentPage + 1}/{totalViews}</span>
+              <Button onClick={() => setCurrentPage(Math.min(totalViews - 1, currentPage + 1))} disabled={currentPage >= totalViews - 1} variant="ghost" size="icon" className="w-8 h-8 rounded-full text-white hover:bg-white/10 hover:text-purple-400 transition-colors"><ChevronRight className="w-4 h-4" /></Button>
             </div>
           </div>
         </div>
 
-        {/* Edit Mode Controls */}
-        {isEditMode && (
-          <Card className="mb-4 border-purple-500/50 bg-purple-500/5 flex-shrink-0">
-            <CardContent className="py-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <span className="text-sm font-medium text-gray-300">Drag Mode:</span>
-                  <div className="flex bg-gray-800 rounded-lg p-1">
-                    <button
-                      onClick={() => setReplacementMode('SWAP')}
-                      className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${replacementMode === 'SWAP'
-                        ? 'bg-purple-600 text-white shadow-lg'
-                        : 'text-gray-400 hover:text-white'
-                        }`}
-                    >
-                      Swap
-                    </button>
-                    <button
-                      onClick={() => setReplacementMode('INSERT')}
-                      className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${replacementMode === 'INSERT'
-                        ? 'bg-purple-600 text-white shadow-lg'
-                        : 'text-gray-400 hover:text-white'
-                        }`}
-                    >
-                      Insert
-                    </button>
-                  </div>
-                </div>
-                <p className="text-xs text-gray-500">
-                  {replacementMode === 'SWAP' ? 'Cards swap places' : 'Cards shift to make room'}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
         {/* Binder Spread Container */}
-        <div className="relative flex-1 flex items-center justify-center">
-          {/* Page Navigation */}
-          <div className="absolute left-0 md:left-4 top-1/2 -translate-y-1/2 z-20">
-            <Button
-              onClick={() => setCurrentPage(Math.max(0, currentPage - 1))}
-              disabled={currentPage === 0}
-              variant="ghost"
-              size="icon"
-              className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gray-900/50 backdrop-blur-sm border border-gray-700/50 text-white"
-            >
-              <ChevronLeft className="w-6 h-6" />
-            </Button>
-          </div>
-          <div className="absolute right-0 md:right-4 top-1/2 -translate-y-1/2 z-20">
-            <Button
-              onClick={() => setCurrentPage(Math.min(totalViews - 1, currentPage + 1))}
-              disabled={currentPage >= totalViews - 1}
-              variant="ghost"
-              size="icon"
-              className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gray-900/50 backdrop-blur-sm border border-gray-700/50 text-white"
-            >
-              <ChevronRight className="w-6 h-6" />
-            </Button>
-          </div>
-
+        <div ref={containerRef} className="relative flex-1 flex items-center justify-center overflow-hidden">
           {/* Binder Pages */}
-          <div className={`flex gap-1 justify-center w-full max-w-full px-2 md:px-0 ${isMobile ? '' : 'perspective-1000'}`}>
+          <div
+            className={`flex gap-1 justify-center items-center mx-auto transition-all duration-300 shadow-2xl rounded-2xl ${!containerSize.width ? 'opacity-0' : 'opacity-100'
+              }`}
+            style={getAspectStyle()}
+          >
             <DndContext
               sensors={sensors}
               collisionDetection={closestCenter}
@@ -654,9 +713,11 @@ const BinderView: React.FC = () => {
               <SortableContext items={slots.map((s) => s.id)} strategy={rectSortingStrategy}>
                 {isMobile ? (
                   // Mobile Single Page View
-                  <div className="relative bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-2xl shadow-2xl p-4 border-2 border-gray-700 w-full max-w-[400px]">
+                  <div
+                    className="relative bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-2xl shadow-2xl p-4 border-2 border-gray-700 w-full h-full flex flex-col justify-center"
+                  >
                     <div className="absolute inset-0 bg-gradient-to-br from-yellow-50/[0.02] to-transparent rounded-2xl pointer-events-none"></div>
-                    <div className={`grid ${getGridCols()} gap-2 relative z-10`}>
+                    <div className={`grid ${getGridCols()} relative z-10`}>
                       {currentViewSlots.map((slot) => (
                         <SortableCard
                           key={slot.id}
@@ -683,11 +744,10 @@ const BinderView: React.FC = () => {
                 ) : (
                   // Desktop Spread View
                   <>
-                    <div className="relative bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-l-2xl shadow-2xl p-6 border-2 border-r-0 border-gray-700"
-                      style={{ width: '450px' }}>
+                    <div className="relative bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-l-2xl shadow-2xl p-6 border-2 border-r-0 border-gray-700 w-full h-full flex flex-col justify-center">
                       <div className="absolute inset-0 bg-gradient-to-br from-yellow-50/[0.02] to-transparent rounded-l-2xl pointer-events-none"></div>
 
-                      <div className={`grid ${getGridCols()} gap-2 relative z-10`}>
+                      <div className={`grid ${getGridCols()} gap-2 h-full content-center relative z-10`}>
                         {leftPageSlots.map((slot) => (
                           <SortableCard
                             key={slot.id}
@@ -714,11 +774,10 @@ const BinderView: React.FC = () => {
 
                     <div className="w-px bg-gray-600"></div>
 
-                    <div className="relative bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-r-2xl shadow-2xl p-6 border-2 border-l-0 border-gray-700"
-                      style={{ width: '450px' }}>
+                    <div className="relative bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-r-2xl shadow-2xl p-6 border-2 border-l-0 border-gray-700 w-full h-full flex flex-col justify-center">
                       <div className="absolute inset-0 bg-gradient-to-br from-yellow-50/[0.02] to-transparent rounded-r-2xl pointer-events-none"></div>
 
-                      <div className={`grid ${getGridCols()} gap-2 relative z-10`}>
+                      <div className={`grid ${getGridCols()} gap-2 h-full content-center relative z-10`}>
                         {rightPageSlots.map((slot) => (
                           <SortableCard
                             key={slot.id}
@@ -758,6 +817,15 @@ const BinderView: React.FC = () => {
                 ) : null}
               </DragOverlay>
             </DndContext>
+          </div>
+        </div>
+
+        {/* Portrait Navigation (Bottom) */}
+        <div className="landscape:hidden flex justify-center mt-3 mb-1 flex-shrink-0 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-150 z-20">
+          <div className="flex items-center gap-4 bg-gray-900/60 backdrop-blur-md p-1.5 rounded-full border border-gray-700/50 shadow-xl ring-1 ring-white/5">
+            <Button onClick={() => setCurrentPage(Math.max(0, currentPage - 1))} disabled={currentPage === 0} variant="ghost" size="icon" className="w-10 h-10 rounded-full text-white hover:bg-white/10 active:scale-95 transition-all"><ChevronLeft className="w-6 h-6" /></Button>
+            <span className="text-sm font-medium text-gray-200 tabular-nums px-2 min-w-[5rem] text-center">Page {currentPage + 1} of {totalViews}</span>
+            <Button onClick={() => setCurrentPage(Math.min(totalViews - 1, currentPage + 1))} disabled={currentPage >= totalViews - 1} variant="ghost" size="icon" className="w-10 h-10 rounded-full text-white hover:bg-white/10 active:scale-95 transition-all"><ChevronRight className="w-6 h-6" /></Button>
           </div>
         </div>
 

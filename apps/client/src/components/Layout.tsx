@@ -17,7 +17,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const isActive = (path: string) => location.pathname === path;
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-950 via-purple-950/10 to-gray-950 flex flex-col md:flex-row">
+        <div className="h-screen w-screen overflow-hidden bg-gradient-to-br from-gray-950 via-purple-950/10 to-gray-950 flex flex-col md:flex-row fixed inset-0">
             {/* Animated background */}
             <div className="fixed inset-0 overflow-hidden pointer-events-none">
                 <div className="absolute top-0 left-1/4 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl animate-pulse"></div>
@@ -26,11 +26,11 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
             {/* Desktop Sidebar */}
             <aside
-                className={`hidden md:block fixed left-0 top-0 h-screen bg-gray-900/95 backdrop-blur-xl border-r border-gray-800/50 z-50 transition-all duration-300 ease-in-out ${sidebarExpanded ? 'w-60' : 'w-16'
+                className={`hidden md:flex flex-col h-full bg-gray-900/95 backdrop-blur-xl border-r border-gray-800/50 z-50 transition-all duration-300 ease-in-out ${sidebarExpanded ? 'w-60' : 'w-16'
                     }`}
             >
                 {/* Logo Section */}
-                <div className="p-4 border-b border-gray-800/50">
+                <div className="p-4 border-b border-gray-800/50 flex-shrink-0">
                     <Link to="/" className="flex items-center gap-3 group">
                         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center shadow-lg shadow-purple-500/30 group-hover:shadow-purple-500/50 transition-all flex-shrink-0">
                             <Book className="w-5 h-5 text-white" />
@@ -50,7 +50,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 </div>
 
                 {/* Navigation Links */}
-                <nav className="flex-1 p-3 space-y-2">
+                <nav className="flex-1 p-3 space-y-2 overflow-y-auto">
                     <Link
                         to="/"
                         className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${isActive('/')
@@ -64,7 +64,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 </nav>
 
                 {/* Bottom Section */}
-                <div className="p-3 border-t border-gray-800/50 space-y-2">
+                <div className="p-3 border-t border-gray-800/50 space-y-2 flex-shrink-0">
                     {/* Toggle Button */}
                     <button
                         onClick={() => setSidebarExpanded(!sidebarExpanded)}
@@ -130,8 +130,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
             {/* Main Content */}
             <main
-                className={`flex-1 relative z-10 transition-all duration-300 ease-in-out pt-16 pb-20 md:py-0 md:pb-0 ${sidebarExpanded ? 'md:ml-60' : 'md:ml-16'
-                    }`}
+                className="flex-1 overflow-hidden relative z-10 pt-16 pb-[calc(60px+env(safe-area-inset-bottom))] md:py-0 md:pb-0 h-full"
             >
                 {children}
             </main>
