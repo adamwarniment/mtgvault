@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { LogOut, Book, Sparkles, Home, ChevronLeft, ChevronRight } from 'lucide-react';
 
-const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+const Layout: React.FC<{ children: React.ReactNode; allowScroll?: boolean }> = ({ children, allowScroll = false }) => {
     const { logout } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
@@ -93,7 +93,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
             {/* Mobile Top Bar */}
             <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-gray-900/95 backdrop-blur-xl border-b border-gray-800/50 z-50 px-4 flex items-center justify-between">
-                <Link to="/" className="flex items-center gap-3">
+                <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center shadow-lg shadow-purple-500/30">
                         <Book className="w-4 h-4 text-white" />
                     </div>
@@ -102,35 +102,21 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                             MTG Vault
                         </h1>
                     </div>
-                </Link>
-                <button
-                    onClick={handleLogout}
-                    className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all"
-                >
-                    <LogOut className="w-5 h-5" />
-                </button>
-            </div>
-
-            {/* Mobile Bottom Navigation */}
-            <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-gray-900/95 backdrop-blur-xl border-t border-gray-800/50 z-50 pb-safe">
-                <div className="flex justify-around items-center p-2">
-                    <Link
-                        to="/"
-                        className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-all ${isActive('/')
-                            ? 'text-purple-400'
-                            : 'text-gray-400 hover:text-white'
-                            }`}
-                    >
-                        <Home className="w-6 h-6" />
-                        <span className="text-[10px] font-medium">Home</span>
-                    </Link>
-                    {/* Add more mobile nav items here if they exist in desktop sidebar */}
                 </div>
-            </nav>
+                <Link
+                    to="/"
+                    className={`p-2 rounded-lg transition-all ${isActive('/')
+                        ? 'text-purple-400 bg-purple-500/20'
+                        : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
+                        }`}
+                >
+                    <Home className="w-5 h-5" />
+                </Link>
+            </div>
 
             {/* Main Content */}
             <main
-                className="flex-1 overflow-hidden relative z-10 pt-16 pb-[calc(60px+env(safe-area-inset-bottom))] md:py-0 md:pb-0 h-full"
+                className={`flex-1 relative z-10 pt-16 md:py-0 h-full ${allowScroll ? 'overflow-auto' : 'overflow-hidden'}`}
             >
                 {children}
             </main>

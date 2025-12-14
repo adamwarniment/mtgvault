@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api';
-import { Plus, BookOpen, Layers, ArrowRight } from 'lucide-react';
+import { Plus, BookOpen, ArrowRight } from 'lucide-react';
 import Layout from '../components/Layout';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -54,7 +54,7 @@ const Dashboard: React.FC = () => {
     };
 
     return (
-        <Layout>
+        <Layout allowScroll={true}>
             <div className="max-w-7xl mx-auto px-6 py-12">
                 {/* Header */}
                 <div className="mb-12">
@@ -62,39 +62,9 @@ const Dashboard: React.FC = () => {
                     <p className="text-gray-400">Organize and manage your Magic: The Gathering collection</p>
                 </div>
 
-                {/* Stats Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-                    <Card>
-                        <CardContent className="pt-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm text-gray-400 mb-1">Total Binders</p>
-                                    <p className="text-3xl font-bold text-white">{binders.length}</p>
-                                </div>
-                                <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center">
-                                    <BookOpen className="w-6 h-6 text-purple-400" />
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardContent className="pt-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm text-gray-400 mb-1">Total Cards</p>
-                                    <p className="text-3xl font-bold text-white">
-                                        {binders.reduce((sum, b) => sum + b.cards.length, 0)}
-                                    </p>
-                                </div>
-                                <div className="w-12 h-12 rounded-xl bg-pink-500/20 flex items-center justify-center">
-                                    <Layers className="w-6 h-6 text-pink-400" />
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card className="border-purple-500/50 bg-gradient-to-br from-purple-500/10 to-pink-500/10">
+                {/* Quick Action Card */}
+                <div className="mb-12">
+                    <Card className="border-purple-500/50 bg-gradient-to-br from-purple-500/10 to-pink-500/10 max-w-md">
                         <CardContent className="pt-6">
                             <div className="flex items-center justify-between">
                                 <div>
