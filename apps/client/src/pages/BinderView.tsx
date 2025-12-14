@@ -660,25 +660,25 @@ const BinderView: React.FC = () => {
 
   return (
     <Layout>
-      <div className="h-full flex flex-col landscape:flex-row py-2 px-2 md:py-4 md:px-4 overflow-hidden max-h-full">
+      <div className="h-full flex flex-col xl:flex-row py-2 px-2 md:py-4 md:px-4 overflow-hidden max-h-full">
 
         {/* Header / Sidebar (Landscape) */}
-        <div className="mb-4 flex-shrink-0 landscape:mb-0 landscape:w-56 landscape:h-full landscape:flex landscape:flex-col landscape:justify-center landscape:mr-4 landscape:border-r landscape:border-gray-800/50 landscape:pr-4 landscape:overflow-y-auto custom-scrollbar">
-          <div className="flex justify-between items-start gap-2 mb-2 landscape:flex-col landscape:items-center landscape:w-full landscape:mb-6 landscape:gap-4">
+        <div className="mb-4 flex-shrink-0 xl:mb-0 xl:w-56 xl:h-full xl:flex xl:flex-col xl:justify-center xl:mr-4 xl:border-r xl:border-gray-800/50 xl:pr-4 xl:overflow-y-auto custom-scrollbar">
+          <div className="flex justify-between items-start gap-2 mb-2 xl:flex-col xl:items-center xl:w-full xl:mb-6 xl:gap-4">
             {isEditMode ? (
               <Input
                 value={binder.name}
                 onChange={handleNameChange}
                 onBlur={handleNameBlur}
                 onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-                className="text-2xl font-bold text-white mb-1 landscape:text-center landscape:mb-2 !bg-white/5 !border-white/10 hover:!border-purple-500/50 focus:!border-purple-500 focus:ring-2 focus:ring-purple-500/50 rounded-xl px-4 h-auto w-full text-center transition-all shadow-inner"
+                className="text-2xl font-bold text-white mb-1 xl:text-center xl:mb-2 !bg-white/5 !border-white/10 hover:!border-purple-500/50 focus:!border-purple-500 focus:ring-2 focus:ring-purple-500/50 rounded-xl px-4 h-auto w-full text-center transition-all shadow-inner"
                 placeholder="Binder Name"
               />
             ) : (
-              <h1 className="text-2xl font-bold text-white mb-1 landscape:text-center landscape:mb-2">{binder.name}</h1>
+              <h1 className="text-2xl font-bold text-white mb-1 xl:text-center xl:mb-2">{binder.name}</h1>
             )}
 
-            <div className="flex items-center gap-2 landscape:justify-center landscape:flex-wrap landscape:gap-3">
+            <div className="flex items-center gap-2 xl:justify-center xl:flex-wrap xl:gap-3">
               {/* Bulk Add Button */}
               <Button
                 onClick={handleBulkAddClick}
@@ -728,10 +728,10 @@ const BinderView: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-4 text-sm text-gray-400 h-8 landscape:h-auto landscape:w-full landscape:flex-col landscape:items-stretch landscape:gap-6">
+          <div className="flex flex-wrap items-center gap-4 text-sm text-gray-400 h-8 xl:h-auto xl:w-full xl:flex-col xl:items-stretch xl:gap-6">
             {isEditMode ? (
               // EDIT MODE CONTROLS (Replaces Stats)
-              <div className="flex items-center gap-4 w-full animate-in fade-in zoom-in-95 duration-200 landscape:flex-col landscape:items-center landscape:text-center landscape:gap-3">
+              <div className="flex items-center gap-4 w-full animate-in fade-in zoom-in-95 duration-200 xl:flex-col xl:items-center xl:text-center xl:gap-3">
                 <span className="text-sm font-medium text-gray-300">Drag Mode</span>
                 <div className="flex bg-gray-800 rounded-lg p-0.5 border border-gray-700/50">
                   <button
@@ -753,7 +753,7 @@ const BinderView: React.FC = () => {
                     Insert
                   </button>
                 </div>
-                <span className="text-xs text-gray-500 hidden sm:inline landscape:inline ml-auto landscape:ml-0">
+                <span className="text-xs text-gray-500 hidden sm:inline xl:inline ml-auto xl:ml-0">
                   {replacementMode === 'SWAP' ? 'Swap positions' : 'Shift others'}
                 </span>
 
@@ -771,35 +771,35 @@ const BinderView: React.FC = () => {
               </div>
             ) : (
               // NORMAL STATS
-              <div className="w-full flex items-center gap-4 animate-in fade-in zoom-in-95 duration-200 landscape:flex-col landscape:items-center landscape:gap-3">
-                <div className="flex items-center gap-4 landscape:flex-col landscape:gap-1">
+              <div className="w-full flex items-center gap-4 animate-in fade-in zoom-in-95 duration-200 xl:flex-col xl:items-center xl:gap-3">
+                <div className="flex items-center gap-4 xl:flex-col xl:gap-1">
                   <span className="flex items-center gap-2">
                     <Layers className="w-4 h-4" />
                     {binder.cards.length} cards
                   </span>
                 </div>
 
-                <span className="w-px h-6 bg-gray-700 mx-1 hidden md:block landscape:hidden" />
-                <div className="w-full h-px bg-gray-800 my-1 hidden landscape:block" />
+                <span className="w-px h-6 bg-gray-700 mx-1 hidden md:block xl:hidden" />
+                <div className="w-full h-px bg-gray-800 my-1 hidden xl:block" />
 
-                <div className="flex items-center gap-2 ml-auto md:ml-0 landscape:w-full landscape:flex-col landscape:gap-3">
+                <div className="flex items-center gap-2 ml-auto md:ml-0 xl:w-full xl:flex-col xl:gap-3">
                   {/* Total Value Pill */}
-                  <div className="flex items-center gap-2 px-3 py-1 bg-gray-900/40 border border-gray-700/50 rounded-full shadow-inner landscape:w-full landscape:justify-center">
-                    <span className="text-xs text-gray-500 font-medium uppercase tracking-wider hidden sm:inline landscape:inline">Total</span>
+                  <div className="flex items-center gap-2 px-3 py-1 bg-gray-900/40 border border-gray-700/50 rounded-full shadow-inner xl:w-full xl:justify-center">
+                    <span className="text-xs text-gray-500 font-medium uppercase tracking-wider hidden sm:inline xl:inline">Total</span>
                     <span className="text-white font-mono font-bold">
                       ${totalValue.toFixed(2)}
                     </span>
                   </div>
 
                   {/* Purchased & Missing Breakdown */}
-                  <div className="flex items-center rounded-full bg-gray-900/40 border border-gray-700/50 overflow-hidden shadow-inner landscape:w-full landscape:justify-center">
-                    <div className="flex items-center gap-1.5 px-3 py-1 border-r border-gray-700/50 bg-green-500/5 landscape:flex-1 landscape:justify-center">
+                  <div className="flex items-center rounded-full bg-gray-900/40 border border-gray-700/50 overflow-hidden shadow-inner xl:w-full xl:justify-center">
+                    <div className="flex items-center gap-1.5 px-3 py-1 border-r border-gray-700/50 bg-green-500/5 xl:flex-1 xl:justify-center">
                       <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
                       <span className="text-green-400 font-mono text-xs font-medium">
                         ${purchasedValue.toFixed(2)}
                       </span>
                     </div>
-                    <div className="flex items-center gap-1.5 px-3 py-1 bg-red-500/5 landscape:flex-1 landscape:justify-center">
+                    <div className="flex items-center gap-1.5 px-3 py-1 bg-red-500/5 xl:flex-1 xl:justify-center">
                       <div className="w-1.5 h-1.5 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]" />
                       <span className="text-red-400 font-mono text-xs font-medium">
                         ${missingValue.toFixed(2)}
@@ -812,7 +812,7 @@ const BinderView: React.FC = () => {
           </div>
 
           {/* Landscape Navigation (Sidebar) */}
-          <div className="hidden landscape:flex w-full justify-center mt-auto pt-4 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-150">
+          <div className="hidden xl:flex w-full justify-center mt-auto pt-4 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-150">
             <div className="flex items-center gap-2 bg-gray-900/40 p-1 rounded-full border border-gray-700/50 shadow-inner">
               <Button onClick={() => setCurrentPage(Math.max(0, currentPage - 1))} disabled={currentPage === 0} variant="ghost" size="icon" className="w-8 h-8 rounded-full text-white hover:bg-white/10 hover:text-purple-400 transition-colors"><ChevronLeft className="w-4 h-4" /></Button>
               <span className="text-xs font-medium text-gray-400 tabular-nums px-2 min-w-[3rem] text-center">Page {currentPage + 1}/{totalViews}</span>
@@ -949,7 +949,7 @@ const BinderView: React.FC = () => {
         </div>
 
         {/* Portrait Navigation (Bottom) */}
-        <div className="landscape:hidden flex justify-center mt-3 mb-1 flex-shrink-0 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-150 z-20">
+        <div className="xl:hidden flex justify-center mt-3 mb-1 flex-shrink-0 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-150 z-20">
           <div className="flex items-center gap-4 bg-gray-900/60 backdrop-blur-md p-1.5 rounded-full border border-gray-700/50 shadow-xl ring-1 ring-white/5">
             <Button onClick={() => setCurrentPage(Math.max(0, currentPage - 1))} disabled={currentPage === 0} variant="ghost" size="icon" className="w-10 h-10 rounded-full text-white hover:bg-white/10 active:scale-95 transition-all"><ChevronLeft className="w-6 h-6" /></Button>
             <span className="text-sm font-medium text-gray-200 tabular-nums px-2 min-w-[5rem] text-center">Page {currentPage + 1} of {totalViews}</span>
