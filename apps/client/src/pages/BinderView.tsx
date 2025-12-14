@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   DndContext,
   closestCenter,
@@ -17,13 +17,16 @@ import {
   rectSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Plus, Trash2, Edit, Save, Layers, ChevronLeft, ChevronRight, Check, Eye, EyeOff, LayoutGrid } from 'lucide-react';
+import { Plus, Trash2, Edit, Save, Layers, ChevronLeft, ChevronRight, Check, Eye, EyeOff, LayoutGrid, DollarSign, RotateCw } from 'lucide-react';
 import api from '../api';
 import Layout from '../components/Layout';
 import SearchModal from '../components/SearchModal';
 import DeleteCardModal from '../components/DeleteCardModal';
 import CardDetailsModal from '../components/CardDetailsModal';
+import ConfirmDialog from '../components/ConfirmDialog';
 import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+import { useToast } from '../components/ui/Toast';
 // import { Card, CardContent } from '../components/ui/Card';
 
 // --- Types ---
@@ -32,6 +35,7 @@ interface CardType {
   scryfallId: string;
   positionIndex: number;
   imageUrl: string;
+  imageUrlBack?: string;
   name: string;
   set?: string;
   collectorNumber?: string;
@@ -57,6 +61,7 @@ const SortableCard = ({
   onRemove,
   grayOutUnpurchased,
   onTogglePurchased,
+  showPrices,
 }: {
   id: string;
   card?: CardType;
@@ -66,6 +71,7 @@ const SortableCard = ({
   onRemove: () => void;
   grayOutUnpurchased: boolean;
   onTogglePurchased: (isPurchased: boolean) => void;
+  showPrices: boolean;
 }) => {
   const {
     attributes,
@@ -75,6 +81,8 @@ const SortableCard = ({
     transition,
     isDragging,
   } = useSortable({ id, disabled: !isEditMode || !card });
+
+  const [isFlipped, setIsFlipped] = React.useState(false);
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -102,13 +110,19 @@ const SortableCard = ({
     }
   };
 
+  const handleFlip = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsFlipped(!isFlipped);
+  };
+
   const isGrayedOut = card && !card.isPurchased && grayOutUnpurchased;
+  const hasBack = !!card?.imageUrlBack;
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`relative aspect-[63/88] rounded-lg border-2 group touch-manipulation ${isEditMode && card ? 'cursor-grab active:cursor-grabbing touch-none' : ''
+      className={`relative aspect-[63/88] rounded-lg border-2 group touch-manipulation [perspective:1000px] ${isEditMode && card ? 'cursor-grab active:cursor-grabbing touch-none' : ''
         } ${!card
           ? 'border-dashed border-yellow-900/30 hover:border-yellow-600/50 flex items-center justify-center cursor-pointer bg-gradient-to-br from-yellow-50/5 to-yellow-100/5 hover:from-yellow-50/10 hover:to-yellow-100/10'
           : 'border-yellow-900/20 hover:border-yellow-600/40 shadow-md'
@@ -117,28 +131,79 @@ const SortableCard = ({
       {...(isEditMode && card ? { ...attributes, ...listeners } : {})}
     >
       {card ? (
-        <>
-          <div className="w-full h-full overflow-hidden rounded-md relative">
-            <img
-              src={card.imageUrl}
-              alt={card.name}
-              className={`w-full h-full object-cover transition-all duration-300 ${isGrayedOut ? 'grayscale brightness-75' : ''}`}
-            />
-            {/* Purchased Checkbox Overlay */}
-            {!isEditMode && (
-              <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-20">
-                <div
-                  className={`w-6 h-6 rounded border-2 flex items-center justify-center cursor-pointer transition-colors ${card.isPurchased
-                    ? 'bg-green-500 border-green-500 text-white'
-                    : 'bg-black/50 border-white/50 hover:bg-black/70'
-                    }`}
-                  onClick={handleTogglePurchased}
-                >
-                  {card.isPurchased && <Check className="w-4 h-4" />}
-                </div>
-              </div>
-            )}
+        <div className={`relative w-full h-full transition-all duration-500 [transform-style:preserve-3d] ${isFlipped ? '[transform:rotateY(180deg)]' : ''}`}>
+
+          {/* Front Face */}
+          <div className="absolute inset-0 w-full h-full [backface-visibility:hidden]">
+            <div className="w-full h-full overflow-hidden rounded-md relative">
+              <img
+                src={card.imageUrl}
+                alt={card.name}
+                className={`w-full h-full object-cover transition-all duration-300 ${isGrayedOut ? 'grayscale brightness-75' : ''}`}
+              />
+            </div>
           </div>
+
+          {/* Back Face */}
+          {hasBack && (
+            <div className="absolute inset-0 w-full h-full [backface-visibility:hidden] [transform:rotateY(180deg)]">
+              <div className="w-full h-full overflow-hidden rounded-md relative">
+                <img
+                  src={card.imageUrlBack}
+                  alt={card.name}
+                  className={`w-full h-full object-cover transition-all duration-300 ${isGrayedOut ? 'grayscale brightness-75' : ''}`}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Overlays (Visible on top of everything, not rotating with the card face content? 
+              Actually if they are outside the flipping container they won't rotate. 
+              But I put them inside the main div which is the perspective container. 
+              The flipping happens on the div carrying [transform-style:preserve-3d].
+              So if I put overlays outside the flipping div they will stay static.
+          */}
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center gap-1">
+          <div className="w-8 h-8 rounded-full bg-yellow-900/20 group-hover:bg-yellow-600/30 flex items-center justify-center transition-all">
+            <Plus className="w-4 h-4 text-yellow-900/40 group-hover:text-yellow-600/60 transition-colors" />
+          </div>
+          <p className="text-[10px] text-yellow-900/40 group-hover:text-yellow-600/60 transition-colors">Add Card</p>
+        </div>
+      )}
+
+      {/* Static Overlays (Checkboxes, Trash, etc) - These sit on top of the flipping container */}
+      {card && (
+        <>
+          {/* Flip Button */}
+          {hasBack && !isEditMode && (
+            <div className="absolute top-2 left-2 z-30">
+              <button
+                onClick={handleFlip}
+                className="bg-black/20 hover:bg-black/60 text-white/50 hover:text-white p-1.5 rounded-full transition-all border border-white/10 hover:border-white/30"
+                title="Flip Card"
+              >
+                <RotateCw className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
+          {/* Purchased Checkbox Overlay */}
+          {!isEditMode && (
+            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-20">
+              <div
+                className={`w-6 h-6 rounded border-2 flex items-center justify-center cursor-pointer transition-colors ${card.isPurchased
+                  ? 'bg-green-500 border-green-500 text-white'
+                  : 'bg-black/50 border-white/50 hover:bg-black/70'
+                  }`}
+                onClick={handleTogglePurchased}
+              >
+                {card.isPurchased && <Check className="w-4 h-4" />}
+              </div>
+            </div>
+          )}
+
           {isEditMode && (
             <button
               onMouseDown={handleDeleteMouseDown}
@@ -149,8 +214,9 @@ const SortableCard = ({
               <Trash2 className="w-3.5 h-3.5" />
             </button>
           )}
+
           {!isEditMode && (
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-2 pointer-events-none">
+            <div className={`absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent transition-opacity flex flex-col justify-end p-2 pointer-events-none rounded-lg ${showPrices ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
               <div className="flex justify-between items-end w-full">
                 <p className="text-white text-xs font-medium truncate flex-1 mr-1">{card.name}</p>
                 {card.priceUsd && (
@@ -162,13 +228,6 @@ const SortableCard = ({
             </div>
           )}
         </>
-      ) : (
-        <div className="flex flex-col items-center justify-center gap-1">
-          <div className="w-8 h-8 rounded-full bg-yellow-900/20 group-hover:bg-yellow-600/30 flex items-center justify-center transition-all">
-            <Plus className="w-4 h-4 text-yellow-900/40 group-hover:text-yellow-600/60 transition-colors" />
-          </div>
-          <p className="text-[10px] text-yellow-900/40 group-hover:text-yellow-600/60 transition-colors">Add Card</p>
-        </div>
       )}
     </div>
   );
@@ -187,7 +246,10 @@ const BinderView: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(0);
   const [deleteConfirm, setDeleteConfirm] = useState<{ cardId: string; cardName: string } | null>(null);
   const [bulkMode, setBulkMode] = useState(false);
-  const [notification, setNotification] = useState<string | null>(null);
+  const [showPrices, setShowPrices] = useState(false);
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  const [showDeleteBinderConfirm, setShowDeleteBinderConfirm] = useState(false);
 
   // State for mobile/single-view detection (increased breakpoint for better portrait tablet support)
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
@@ -253,10 +315,20 @@ const BinderView: React.FC = () => {
     if (!binder || selectedSlot === null) return;
 
     try {
+      let imageUrl = scryfallCard.image_uris?.normal || '';
+      let imageUrlBack = '';
+
+      // Handle double-sided cards
+      if (!imageUrl && scryfallCard.card_faces && scryfallCard.card_faces.length === 2) {
+        imageUrl = scryfallCard.card_faces[0].image_uris?.normal || '';
+        imageUrlBack = scryfallCard.card_faces[1].image_uris?.normal || '';
+      }
+
       await api.post(`/binders/${binder.id}/cards`, {
         scryfallId: scryfallCard.id,
         positionIndex: selectedSlot,
-        imageUrl: scryfallCard.image_uris?.normal || '',
+        imageUrl,
+        imageUrlBack: imageUrlBack || undefined,
         name: scryfallCard.name,
         set: scryfallCard.set,
         collectorNumber: scryfallCard.collector_number,
@@ -272,8 +344,7 @@ const BinderView: React.FC = () => {
 
       if (bulkMode) {
         // Show notification
-        setNotification('Card added!');
-        setTimeout(() => setNotification(null), 2000);
+        toast('Card added!', 'success', 2000);
 
         // Calculate next empty slot
         const occupiedIndices = new Set(binder.cards.map(c => c.positionIndex));
@@ -460,6 +531,34 @@ const BinderView: React.FC = () => {
     }
   };
 
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!binder) return;
+    setBinder({ ...binder, name: e.target.value });
+  };
+
+  const handleNameBlur = async () => {
+    if (!binder) return;
+    try {
+      await api.put(`/binders/${binder.id}`, { name: binder.name });
+      toast('Binder renamed', 'success');
+    } catch (error) {
+      console.error('Failed to rename binder');
+      toast('Failed to rename binder', 'error');
+    }
+  };
+
+  const handleDeleteBinder = async () => {
+    if (!binder) return;
+    try {
+      await api.delete(`/binders/${binder.id}`);
+      toast('Binder deleted', 'success');
+      navigate('/');
+    } catch (error) {
+      console.error('Failed to delete binder');
+      toast('Failed to delete binder', 'error');
+    }
+  };
+
   if (!binder) return (
     <Layout>
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -566,17 +665,20 @@ const BinderView: React.FC = () => {
         {/* Header / Sidebar (Landscape) */}
         <div className="mb-4 flex-shrink-0 landscape:mb-0 landscape:w-56 landscape:h-full landscape:flex landscape:flex-col landscape:justify-center landscape:mr-4 landscape:border-r landscape:border-gray-800/50 landscape:pr-4 landscape:overflow-y-auto custom-scrollbar">
           <div className="flex justify-between items-start gap-2 mb-2 landscape:flex-col landscape:items-center landscape:w-full landscape:mb-6 landscape:gap-4">
-            <h1 className="text-2xl font-bold text-white mb-1 landscape:text-center landscape:mb-2">{binder.name}</h1>
+            {isEditMode ? (
+              <Input
+                value={binder.name}
+                onChange={handleNameChange}
+                onBlur={handleNameBlur}
+                onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+                className="text-2xl font-bold text-white mb-1 landscape:text-center landscape:mb-2 !bg-white/5 !border-white/10 hover:!border-purple-500/50 focus:!border-purple-500 focus:ring-2 focus:ring-purple-500/50 rounded-xl px-4 h-auto w-full text-center transition-all shadow-inner"
+                placeholder="Binder Name"
+              />
+            ) : (
+              <h1 className="text-2xl font-bold text-white mb-1 landscape:text-center landscape:mb-2">{binder.name}</h1>
+            )}
 
             <div className="flex items-center gap-2 landscape:justify-center landscape:flex-wrap landscape:gap-3">
-              {/* Notification Toast */}
-              {notification && (
-                <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[100] bg-green-500 text-white px-6 py-2 rounded-full shadow-2xl flex items-center gap-2 animate-in fade-in slide-in-from-top-4">
-                  <Check className="w-4 h-4" />
-                  <span className="font-medium">{notification}</span>
-                </div>
-              )}
-
               {/* Bulk Add Button */}
               <Button
                 onClick={handleBulkAddClick}
@@ -597,6 +699,17 @@ const BinderView: React.FC = () => {
                 title={binder.grayOutUnpurchased ? "Show all in color" : "Gray out unpurchased"}
               >
                 {binder.grayOutUnpurchased ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </Button>
+
+              {/* Show Prices Toggle */}
+              <Button
+                onClick={() => setShowPrices(!showPrices)}
+                variant="outline"
+                size="icon"
+                className={`w-10 h-10 transition-all ${!showPrices ? 'text-gray-400 bg-gray-800/50' : 'text-green-400 bg-green-500/10 border-green-500/50'}`}
+                title={showPrices ? "Hide Prices" : "Show Prices"}
+              >
+                <DollarSign className="w-5 h-5" />
               </Button>
 
               <Button
@@ -643,6 +756,18 @@ const BinderView: React.FC = () => {
                 <span className="text-xs text-gray-500 hidden sm:inline landscape:inline ml-auto landscape:ml-0">
                   {replacementMode === 'SWAP' ? 'Swap positions' : 'Shift others'}
                 </span>
+
+                <div className="w-full h-px bg-gray-800 my-1" />
+
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => setShowDeleteBinderConfirm(true)}
+                  className="w-full gap-2 shadow-red-500/20"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Delete Binder
+                </Button>
               </div>
             ) : (
               // NORMAL STATS
@@ -736,6 +861,7 @@ const BinderView: React.FC = () => {
                           }}
                           onRemove={() => slot.card && handleRemoveCard(slot.card.id, slot.card.name)}
                           grayOutUnpurchased={binder.grayOutUnpurchased}
+                          showPrices={showPrices}
                           onTogglePurchased={(isPurchased) => slot.card && handleTogglePurchased(slot.card.id, isPurchased)}
                         />
                       ))}
@@ -766,6 +892,7 @@ const BinderView: React.FC = () => {
                             }}
                             onRemove={() => slot.card && handleRemoveCard(slot.card.id, slot.card.name)}
                             grayOutUnpurchased={binder.grayOutUnpurchased}
+                            showPrices={showPrices}
                             onTogglePurchased={(isPurchased) => slot.card && handleTogglePurchased(slot.card.id, isPurchased)}
                           />
                         ))}
@@ -796,6 +923,7 @@ const BinderView: React.FC = () => {
                             }}
                             onRemove={() => slot.card && handleRemoveCard(slot.card.id, slot.card.name)}
                             grayOutUnpurchased={binder.grayOutUnpurchased}
+                            showPrices={showPrices}
                             onTogglePurchased={(isPurchased) => slot.card && handleTogglePurchased(slot.card.id, isPurchased)}
                           />
                         ))}
@@ -835,18 +963,28 @@ const BinderView: React.FC = () => {
           onSelectCard={handleAddCard}
         />
 
+        <DeleteCardModal
+          isOpen={!!deleteConfirm}
+          onClose={() => setDeleteConfirm(null)}
+          onConfirm={confirmRemoveCard}
+          cardName={deleteConfirm?.cardName || ''}
+        />
+
+        <ConfirmDialog
+          isOpen={showDeleteBinderConfirm}
+          onCancel={() => setShowDeleteBinderConfirm(false)}
+          onConfirm={handleDeleteBinder}
+          title="Delete Binder"
+          message={`Are you sure you want to delete "${binder.name}"? This action cannot be undone and all cards inside will be lost from this binder view.`}
+          confirmText="Delete Binder"
+          variant="danger"
+        />
+
         <CardDetailsModal
           card={selectedCard}
           onClose={() => setSelectedCard(null)}
           onRefresh={handleRefreshPrice}
           onTogglePurchased={(isPurchased) => selectedCard && handleTogglePurchased(selectedCard.id, isPurchased)}
-        />
-
-        <DeleteCardModal
-          isOpen={!!deleteConfirm}
-          cardName={deleteConfirm?.cardName || ''}
-          onClose={() => setDeleteConfirm(null)}
-          onConfirm={confirmRemoveCard}
         />
       </div>
     </Layout>

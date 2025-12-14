@@ -57,7 +57,7 @@ export const getBinder = async (req: AuthRequest, res: Response) => {
 
 export const addCard = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
-    const { scryfallId, positionIndex, imageUrl, name, set, collectorNumber, priceUsd } = req.body;
+    const { scryfallId, positionIndex, imageUrl, imageUrlBack, name, set, collectorNumber, priceUsd } = req.body;
 
     try {
         const binder = await prisma.binder.findUnique({ where: { id } });
@@ -85,6 +85,7 @@ export const addCard = async (req: AuthRequest, res: Response) => {
                 scryfallId,
                 positionIndex,
                 imageUrl,
+                imageUrlBack,
                 name,
                 set,
                 collectorNumber,
@@ -236,5 +237,52 @@ export const updateBinderSettings = async (req: AuthRequest, res: Response) => {
     } catch (error) {
         console.error('Failed to update binder settings:', error);
         res.status(500).json({ error: 'Failed to update binder settings' });
+    }
+};
+
+export const updateBinder = async (req: AuthRequest, res: Response) => {
+    const { id } = req.params;
+    const { name } = req.body;
+
+    try {
+        const binder = await prisma.binder.findUnique({ where: { id } });
+        if (!binder || binder.userId !== req.user!.userId) {
+            return res.status(403).json({ error: 'Unauthorized' });
+        }
+
+        const updatedBinder = await prisma.binder.update({
+            where: { id },
+            data: { name },
+        });
+
+        res.json(updatedBinder);
+    } catch (error) {
+        console.error('Failed to update binder:', error);
+        res.status(500).json({ error: 'Failed to update binder' });
+    }
+};
+
+export const deleteBinder = async (req: AuthRequest, res: Response) => {
+    const { id } = req.params;
+
+    try {
+        const binder = await prisma.binder.findUnique({ where: { id } });
+        if (!binder || binder.userId !== req.user!.userId) {
+            return res.status(403).json({ error: 'Unauthorized' });
+        }
+
+        // Delete all cards first (though cascade delete might handle this if configured in schema, better safe)
+        // Actually, prisma handles cascade deletes if defined in schema, but explicit delete is safer if unsure.
+        // Let's assume schema has cascade or we delete cards.
+        // Actually best practice with Prisma is typically relying on relation onDelete: Cascade.
+        // But to be safe let's just delete the binder. If it fails due to FK, we know we need to delete cards.
+        await prisma.binder.delete({
+            where: { id },
+        });
+
+        res.sendStatus(204);
+    } catch (error) {
+        console.error('Failed to delete binder:', error);
+        res.status(500).json({ error: 'Failed to delete binder' });
     }
 };

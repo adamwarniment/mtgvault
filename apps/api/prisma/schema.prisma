@@ -37,6 +37,7 @@ model Card {
   scryfallId      String
   positionIndex   Int
   imageUrl        String
+  imageUrlBack    String?
   name            String
   set             String?
   collectorNumber String?

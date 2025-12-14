@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, X, Loader2 } from 'lucide-react';
+import { Search, X, Loader2, RotateCw } from 'lucide-react';
 import api from '../api';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
@@ -21,6 +21,85 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, onSelectCard
     const [hasMore, setHasMore] = React.useState(false);
 
     if (!isOpen) return null;
+
+    const SearchResultCard = ({ card, onSelect }: { card: any, onSelect: (card: any) => void }) => {
+        const [isFlipped, setIsFlipped] = React.useState(false);
+
+        // Determine images
+        let frontImage = card.image_uris?.normal;
+        let backImage = null;
+
+        if (!frontImage && card.card_faces && card.card_faces.length === 2) {
+            frontImage = card.card_faces[0].image_uris?.normal;
+            backImage = card.card_faces[1].image_uris?.normal;
+        }
+
+        const handleFlip = (e: React.MouseEvent) => {
+            e.stopPropagation();
+            setIsFlipped(!isFlipped);
+        }
+
+        // Calculate price (prioritize USD, then Foil, then Etched)
+        const price = card.prices?.usd || card.prices?.usd_foil || card.prices?.usd_etched;
+
+        return (
+            <div className="flex flex-col gap-2 group">
+                <div
+                    onClick={() => onSelect(card)}
+                    className="relative w-full aspect-[63/88] rounded-lg cursor-pointer [perspective:1000px] hover:scale-105 transition-all shadow-md hover:shadow-xl hover:shadow-purple-500/20"
+                    role="button"
+                >
+                    {/* Flip Container */}
+                    <div className={`w-full h-full relative transition-all duration-500 [transform-style:preserve-3d] ${isFlipped ? '[transform:rotateY(180deg)]' : ''}`}>
+                        {/* Front */}
+                        <div className="absolute inset-0 w-full h-full [backface-visibility:hidden] rounded-lg overflow-hidden">
+                            {frontImage ? (
+                                <img src={frontImage} alt={card.name} className="w-full h-full object-cover" />
+                            ) : (
+                                <div className="w-full h-full bg-gray-800 flex items-center justify-center p-3 text-center">
+                                    <p className="text-sm text-gray-400">{card.name}</p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Back */}
+                        {backImage && (
+                            <div className="absolute inset-0 w-full h-full [backface-visibility:hidden] [transform:rotateY(180deg)] rounded-lg overflow-hidden">
+                                <img src={backImage} alt={card.name} className="w-full h-full object-cover" />
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Bottom Row: Pill + Flip Button */}
+                <div className="flex items-center gap-2 justify-between">
+                    {/* Pill: Name + Price */}
+                    <div
+                        className="flex-1 min-w-0 bg-gray-800/80 border border-gray-700/50 rounded-full px-3 py-1.5 flex items-center gap-2 cursor-pointer hover:bg-gray-800 transition-colors group/pill"
+                        onClick={() => onSelect(card)}
+                    >
+                        <span className="text-xs font-medium text-gray-300 group-hover/pill:text-white truncate" title={card.name}>{card.name}</span>
+                        {price && (
+                            <span className="ml-auto flex-shrink-0 text-[10px] font-mono font-bold text-green-400 bg-green-500/10 px-1.5 py-0.5 rounded">
+                                ${parseFloat(price).toFixed(2)}
+                            </span>
+                        )}
+                    </div>
+
+                    {/* Flip Button (Outside) */}
+                    {backImage && (
+                        <button
+                            onClick={handleFlip}
+                            className="bg-gray-800/80 border border-gray-700/50 text-gray-400 hover:text-white hover:bg-gray-700 p-1.5 rounded-full transition-all shrink-0"
+                            title="Flip Card"
+                        >
+                            <RotateCw className="w-4 h-4" />
+                        </button>
+                    )}
+                </div>
+            </div>
+        )
+    };
 
     const handleSearch = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -204,29 +283,11 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, onSelectCard
                                     </div>
                                     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
                                         {results.map((card) => (
-                                            <button
+                                            <SearchResultCard
                                                 key={card.id}
-                                                onClick={() => onSelectCard(card)}
-                                                className="group relative rounded-lg overflow-hidden transition-all hover:scale-105 hover:shadow-xl hover:shadow-purple-500/30 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                            >
-                                                {card.image_uris ? (
-                                                    <img
-                                                        src={card.image_uris.normal}
-                                                        alt={card.name}
-                                                        className="w-full rounded-lg"
-                                                    />
-                                                ) : (
-                                                    <div className="aspect-[63/88] bg-gray-800 rounded-lg flex items-center justify-center text-center p-3">
-                                                        <p className="text-sm text-gray-400">{card.name}</p>
-                                                    </div>
-                                                )}
-                                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-start justify-end p-3">
-                                                    <p className="text-white text-sm font-medium truncate w-full">{card.name}</p>
-                                                    {card.set && (
-                                                        <p className="text-purple-300 text-xs font-mono uppercase">{card.set}</p>
-                                                    )}
-                                                </div>
-                                            </button>
+                                                card={card}
+                                                onSelect={onSelectCard}
+                                            />
                                         ))}
                                     </div>
                                 </div>

@@ -10,6 +10,8 @@ import {
     refreshCardPrice,
     toggleCardPurchased,
     updateBinderSettings,
+    updateBinder,
+    deleteBinder,
 } from '../controllers/binderController';
 
 const router = Router();
@@ -19,6 +21,8 @@ router.use(authenticateToken);
 router.get('/', getBinders);
 router.post('/', createBinder);
 router.get('/:id', getBinder);
+router.put('/:id', updateBinder); // Rename
+router.delete('/:id', deleteBinder); // Delete
 router.post('/:id/cards', addCard);
 router.delete('/:id/cards/:cardId', removeCard);
 router.put('/:id/reorder', updateCardPositions);
