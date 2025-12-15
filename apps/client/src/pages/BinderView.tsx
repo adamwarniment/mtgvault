@@ -302,6 +302,69 @@ const BinderView: React.FC = () => {
     fetchBinder();
   }, [id]);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if interacting with inputs
+      if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) return;
+      if (!binder) return;
+
+      // Card Detail View Navigation
+      if (selectedCard) {
+        if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+          // Sort cards by position to ensure sequential order
+          const sortedCards = [...binder.cards].sort((a, b) => a.positionIndex - b.positionIndex);
+          const currentIndex = sortedCards.findIndex(c => c.id === selectedCard.id);
+
+          if (currentIndex === -1) return;
+
+          if (e.key === 'ArrowRight' && currentIndex < sortedCards.length - 1) {
+            e.preventDefault();
+            setSelectedCard(sortedCards[currentIndex + 1]);
+          } else if (e.key === 'ArrowLeft' && currentIndex > 0) {
+            e.preventDefault();
+            setSelectedCard(sortedCards[currentIndex - 1]);
+          }
+        }
+        return;
+      }
+
+      // Binder Page Navigation
+      // Only navigate if no other modals are open
+      if (!showSearch && !deleteConfirm && !showDeleteBinderConfirm) {
+        if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+          // Re-calculate total pages logic since it's defined after the early return in render
+          const getGridSize = () => {
+            switch (binder.layout) {
+              case 'GRID_2x2': return 4;
+              case 'GRID_4x3': return 12;
+              case 'GRID_3x3': default: return 9;
+            }
+          };
+
+          const pageSize = getGridSize();
+          const totalSlots = Math.max(
+            Math.ceil((Math.max(...binder.cards.map((c) => c.positionIndex), -1) + 1) / pageSize) * pageSize,
+            pageSize * 2 // At least 2 pages
+          );
+
+          const cardsPerView = pageSize * (isMobile ? 1 : 2);
+          const totalViews = Math.ceil(totalSlots / cardsPerView);
+
+          if (e.key === 'ArrowRight') {
+            e.preventDefault();
+            setCurrentPage(prev => Math.min(totalViews - 1, prev + 1));
+          } else if (e.key === 'ArrowLeft') {
+            e.preventDefault();
+            setCurrentPage(prev => Math.max(0, prev - 1));
+          }
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [binder, selectedCard, showSearch, deleteConfirm, showDeleteBinderConfirm, isMobile]);
+
   const fetchBinder = async () => {
     try {
       const response = await api.get(`/binders/${id}`);

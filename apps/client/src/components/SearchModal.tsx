@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, X, Loader2, RotateCw } from 'lucide-react';
+import { Search, X, Loader2, RotateCw, ZoomIn, ZoomOut } from 'lucide-react';
 import api from '../api';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
@@ -19,6 +19,7 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, onSelectCard
     const [uniqueArtsOnly, setUniqueArtsOnly] = React.useState(false);
     const [page, setPage] = React.useState(1);
     const [hasMore, setHasMore] = React.useState(false);
+    const [zoomLevel, setZoomLevel] = React.useState(160);
 
     if (!isOpen) return null;
 
@@ -217,38 +218,56 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, onSelectCard
                             </form>
 
                             {/* Filter Options */}
-                            <div className="flex items-center gap-2 px-1">
-                                <button
-                                    type="button"
-                                    onClick={() => setUniqueArtsOnly(!uniqueArtsOnly)}
-                                    className={`
-                                        flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium
-                                        transition-all duration-200 border
-                                        ${uniqueArtsOnly
-                                            ? 'bg-purple-500/20 border-purple-500/50 text-purple-300 hover:bg-purple-500/30'
-                                            : 'bg-gray-800/50 border-gray-700 text-gray-400 hover:bg-gray-800 hover:text-gray-300'
-                                        }
-                                    `}
-                                >
-                                    <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        viewBox="0 0 20 20"
-                                        fill="currentColor"
-                                        className="w-3.5 h-3.5"
+                            {/* Filter Options & Zoom */}
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-1">
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setUniqueArtsOnly(!uniqueArtsOnly)}
+                                        className={`
+                                            flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium
+                                            transition-all duration-200 border
+                                            ${uniqueArtsOnly
+                                                ? 'bg-purple-500/20 border-purple-500/50 text-purple-300 hover:bg-purple-500/30'
+                                                : 'bg-gray-800/50 border-gray-700 text-gray-400 hover:bg-gray-800 hover:text-gray-300'
+                                            }
+                                        `}
                                     >
-                                        <path d="M10.75 2.75a.75.75 0 00-1.5 0v8.614L6.295 8.235a.75.75 0 10-1.09 1.03l4.25 4.5a.75.75 0 001.09 0l4.25-4.5a.75.75 0 00-1.09-1.03l-2.955 3.129V2.75z" />
-                                        <path d="M3.5 12.75a.75.75 0 00-1.5 0v2.5A2.75 2.75 0 004.75 18h10.5A2.75 2.75 0 0018 15.25v-2.5a.75.75 0 00-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5z" />
-                                    </svg>
-                                    Unique Arts Only
-                                </button>
-                                <div className="relative group">
-                                    <span className="text-[10px] text-gray-500 cursor-help border border-gray-700 rounded-full w-3.5 h-3.5 flex items-center justify-center">?</span>
-                                    <div className="absolute left-0 top-6 hidden group-hover:block bg-gray-800 border border-gray-700 rounded-lg p-2 w-56 shadow-xl z-10">
-                                        <p className="text-[10px] text-gray-300">
-                                            When enabled, searches for unique full-art or showcase frame cards,
-                                            sorted by rarity. Wraps your search and filters for special card art variations.
-                                        </p>
+                                        <svg
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            viewBox="0 0 20 20"
+                                            fill="currentColor"
+                                            className="w-3.5 h-3.5"
+                                        >
+                                            <path d="M10.75 2.75a.75.75 0 00-1.5 0v8.614L6.295 8.235a.75.75 0 10-1.09 1.03l4.25 4.5a.75.75 0 001.09 0l4.25-4.5a.75.75 0 00-1.09-1.03l-2.955 3.129V2.75z" />
+                                            <path d="M3.5 12.75a.75.75 0 00-1.5 0v2.5A2.75 2.75 0 004.75 18h10.5A2.75 2.75 0 0018 15.25v-2.5a.75.75 0 00-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5z" />
+                                        </svg>
+                                        Unique Arts Only
+                                    </button>
+                                    <div className="relative group">
+                                        <span className="text-[10px] text-gray-500 cursor-help border border-gray-700 rounded-full w-3.5 h-3.5 flex items-center justify-center">?</span>
+                                        <div className="absolute left-0 top-6 hidden group-hover:block bg-gray-800 border border-gray-700 rounded-lg p-2 w-56 shadow-xl z-10">
+                                            <p className="text-[10px] text-gray-300">
+                                                When enabled, searches for unique full-art or showcase frame cards,
+                                                sorted by rarity. Wraps your search and filters for special card art variations.
+                                            </p>
+                                        </div>
                                     </div>
+                                </div>
+
+                                {/* Zoom Slider */}
+                                <div className="flex items-center gap-3 bg-gray-900/30 p-1.5 px-3 rounded-full border border-gray-800/50 w-full sm:w-auto justify-between sm:justify-start">
+                                    <ZoomOut className="w-3.5 h-3.5 text-gray-500 flex-shrink-0" />
+                                    <input
+                                        type="range"
+                                        min="120"
+                                        max="400"
+                                        step="10"
+                                        value={zoomLevel}
+                                        onChange={(e) => setZoomLevel(Number(e.target.value))}
+                                        className="flex-1 sm:w-32 sm:flex-none h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-purple-500 hover:accent-purple-400 transition-colors"
+                                    />
+                                    <ZoomIn className="w-3.5 h-3.5 text-gray-500 flex-shrink-0" />
                                 </div>
                             </div>
                         </div>
@@ -281,7 +300,10 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, onSelectCard
                                             </span>
                                         )}
                                     </div>
-                                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                                    <div
+                                        className="grid gap-4 transition-all duration-200 ease-out"
+                                        style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${zoomLevel}px, 1fr))` }}
+                                    >
                                         {results.map((card) => (
                                             <SearchResultCard
                                                 key={card.id}

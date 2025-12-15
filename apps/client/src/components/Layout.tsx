@@ -204,8 +204,8 @@ const Layout: React.FC<{ children: React.ReactNode; allowScroll?: boolean }> = (
                                     <button
                                         onClick={() => toggleTheme()}
                                         className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border transition-all ${themeMode === 'dark'
-                                                ? 'bg-purple-600/20 border-purple-500/50 text-purple-400'
-                                                : 'border-gray-700 hover:border-gray-600'
+                                            ? 'bg-purple-600/20 border-purple-500/50 text-purple-400'
+                                            : 'border-gray-700 hover:border-gray-600'
                                             }`}
                                         style={{
                                             borderColor: themeMode === 'dark' ? undefined : 'var(--border-primary)',
@@ -218,8 +218,8 @@ const Layout: React.FC<{ children: React.ReactNode; allowScroll?: boolean }> = (
                                     <button
                                         onClick={() => toggleTheme()}
                                         className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border transition-all ${themeMode === 'light'
-                                                ? 'bg-purple-600/20 border-purple-500/50 text-purple-400'
-                                                : 'border-gray-700 hover:border-gray-600'
+                                            ? 'bg-purple-600/20 border-purple-500/50 text-purple-400'
+                                            : 'border-gray-700 hover:border-gray-600'
                                             }`}
                                         style={{
                                             borderColor: themeMode === 'light' ? undefined : 'var(--border-primary)',
