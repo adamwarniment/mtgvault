@@ -40,7 +40,6 @@ interface CardType {
   set?: string;
   collectorNumber?: string;
   priceUsd?: number;
-  tcgplayerUrl?: string;
   isPurchased: boolean;
 }
 
@@ -403,21 +402,6 @@ const BinderView: React.FC = () => {
             : scryfallCard.prices?.usd_etched
               ? parseFloat(scryfallCard.prices.usd_etched)
               : null,
-        tcgplayerUrl: (() => {
-          const tcgUrl = scryfallCard.purchase_uris?.tcgplayer;
-          if (!tcgUrl) return undefined;
-          try {
-            const urlObj = new URL(tcgUrl);
-            const uParam = urlObj.searchParams.get('u');
-            if (uParam) {
-              const productUrl = new URL(uParam);
-              return `${productUrl.protocol}//${productUrl.host}${productUrl.pathname}`;
-            }
-            return undefined;
-          } catch (e) {
-            return undefined;
-          }
-        })(),
         isPurchased: true,
       });
 

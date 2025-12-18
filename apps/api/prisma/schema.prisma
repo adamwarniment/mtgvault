@@ -42,7 +42,6 @@ model Card {
   set             String?
   collectorNumber String?
   priceUsd        Float?
-  tcgplayerUrl    String?
   isPurchased     Boolean  @default(true)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
