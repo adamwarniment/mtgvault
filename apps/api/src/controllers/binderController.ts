@@ -57,7 +57,7 @@ export const getBinder = async (req: AuthRequest, res: Response) => {
 
 export const addCard = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
-    const { scryfallId, positionIndex, imageUrl, imageUrlBack, name, set, collectorNumber, priceUsd } = req.body;
+    const { scryfallId, positionIndex, imageUrl, imageUrlBack, name, set, collectorNumber, priceUsd, tcgplayerUrl } = req.body;
 
     try {
         const binder = await prisma.binder.findUnique({ where: { id } });
@@ -90,6 +90,7 @@ export const addCard = async (req: AuthRequest, res: Response) => {
                 set,
                 collectorNumber,
                 priceUsd,
+                tcgplayerUrl,
             },
         });
 
