@@ -41,6 +41,7 @@ interface CardType {
   collectorNumber?: string;
   priceUsd?: number;
   isPurchased: boolean;
+  tcgplayerUrl?: string | null;
 }
 
 interface Binder {
@@ -387,6 +388,21 @@ const BinderView: React.FC = () => {
         imageUrlBack = scryfallCard.card_faces[1].image_uris?.normal || '';
       }
 
+      let tcgplayerUrl = null;
+      if (scryfallCard.purchase_uris?.tcgplayer) {
+        const rawUrl = scryfallCard.purchase_uris.tcgplayer;
+        try {
+          const uParam = new URLSearchParams(rawUrl.split('?')[1]).get('u');
+          if (uParam) {
+            tcgplayerUrl = decodeURIComponent(uParam).split('?')[0];
+          } else {
+            tcgplayerUrl = rawUrl.split('?')[0];
+          }
+        } catch (e) {
+          console.warn('Failed to parse TCGPlayer URL', e);
+        }
+      }
+
       await api.post(`/binders/${binder.id}/cards`, {
         scryfallId: scryfallCard.id,
         positionIndex: selectedSlot,
@@ -403,6 +419,7 @@ const BinderView: React.FC = () => {
               ? parseFloat(scryfallCard.prices.usd_etched)
               : null,
         isPurchased: true,
+        tcgplayerUrl,
       });
 
       if (bulkMode) {
@@ -552,9 +569,9 @@ const BinderView: React.FC = () => {
       const updatedCard = response.data;
 
       // Update local state
-      const newCards = binder.cards.map(c => c.id === updatedCard.id ? { ...c, priceUsd: updatedCard.priceUsd } : c);
+      const newCards = binder.cards.map(c => c.id === updatedCard.id ? { ...c, priceUsd: updatedCard.priceUsd, tcgplayerUrl: updatedCard.tcgplayerUrl } : c);
       setBinder({ ...binder, cards: newCards });
-      setSelectedCard({ ...selectedCard, priceUsd: updatedCard.priceUsd });
+      setSelectedCard({ ...selectedCard, priceUsd: updatedCard.priceUsd, tcgplayerUrl: updatedCard.tcgplayerUrl });
     } catch (error) {
       console.error('Failed to refresh price');
     }

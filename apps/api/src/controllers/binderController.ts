@@ -57,7 +57,7 @@ export const getBinder = async (req: AuthRequest, res: Response) => {
 
 export const addCard = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
-    const { scryfallId, positionIndex, imageUrl, imageUrlBack, name, set, collectorNumber, priceUsd } = req.body;
+    const { scryfallId, positionIndex, imageUrl, imageUrlBack, name, set, collectorNumber, priceUsd, tcgplayerUrl } = req.body;
 
     try {
         const binder = await prisma.binder.findUnique({ where: { id } });
@@ -90,6 +90,7 @@ export const addCard = async (req: AuthRequest, res: Response) => {
                 set,
                 collectorNumber,
                 priceUsd,
+                tcgplayerUrl,
             },
         });
 
@@ -183,9 +184,21 @@ export const refreshCardPrice = async (req: AuthRequest, res: Response) => {
                     ? parseFloat(scryfallCard.prices.usd_etched)
                     : null;
 
+        let tcgplayerUrl = null;
+        if (scryfallCard.purchase_uris?.tcgplayer) {
+            const rawUrl = scryfallCard.purchase_uris.tcgplayer;
+            const uParam = new URLSearchParams(rawUrl.split('?')[1]).get('u');
+            if (uParam) {
+                const decodedUrl = decodeURIComponent(uParam);
+                tcgplayerUrl = decodedUrl.split('?')[0]; // Remove query params like ?page=1
+            } else {
+                tcgplayerUrl = rawUrl.split('?')[0];
+            }
+        }
+
         const updatedCard = await prisma.card.update({
             where: { id: cardId },
-            data: { priceUsd },
+            data: { priceUsd, tcgplayerUrl },
         });
 
         res.json(updatedCard);
