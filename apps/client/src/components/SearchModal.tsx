@@ -255,6 +255,27 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, onSelectCard
                                     </div>
                                 </div>
 
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => onSelectCard({
+                                        id: 'generic-card-back',
+                                        name: 'Generic Card Back',
+                                        set: 'EXT',
+                                        collector_number: '000',
+                                        image_uris: {
+                                            normal: 'https://backs.scryfall.io/large/2/2/222b7a3b-2321-4d4c-af19-19338b134971.jpg'
+                                        },
+                                        prices: { usd: '0.00' },
+                                        purchase_uris: {}
+                                    })}
+                                    className="h-8 gap-2 bg-gray-800/50 border-gray-700 text-gray-400 hover:text-white hover:bg-gray-800"
+                                >
+                                    <div className="w-3 h-4 bg-gray-600 rounded-sm border border-gray-500" />
+                                    Add Card Back
+                                </Button>
+
                                 {/* Zoom Slider */}
                                 <div className="flex items-center gap-3 bg-gray-900/30 p-1.5 px-3 rounded-full border border-gray-800/50 w-full sm:w-auto justify-between sm:justify-start">
                                     <ZoomOut className="w-3.5 h-3.5 text-gray-500 flex-shrink-0" />

@@ -141,7 +141,7 @@ const CardDetailsModal: React.FC<CardDetailsModalProps> = ({ card, onClose, onRe
 
                         {card.tcgplayerUrl && (
                             <a
-                                href={card.tcgplayerUrl}
+                                href={`${card.tcgplayerUrl}?Language=English&Printing=Normal|Foil&page=1`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="flex items-center gap-3 p-3 mb-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-blue-500/50 transition-all group"

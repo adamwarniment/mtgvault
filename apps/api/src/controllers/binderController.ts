@@ -172,6 +172,11 @@ export const refreshCardPrice = async (req: AuthRequest, res: Response) => {
             return res.status(404).json({ error: 'Card not found' });
         }
 
+        // Skip refresh for generic card back
+        if (card.scryfallId === 'generic-card-back') {
+            return res.json(card);
+        }
+
         // Fetch latest data from Scryfall
         const response = await axios.get(`https://api.scryfall.com/cards/${card.scryfallId}`);
         const scryfallCard = response.data;
