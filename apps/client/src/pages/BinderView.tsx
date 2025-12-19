@@ -17,11 +17,12 @@ import {
   rectSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Plus, Trash2, Edit, Save, Layers, ChevronLeft, ChevronRight, Check, Eye, EyeOff, LayoutGrid, DollarSign, RotateCw } from 'lucide-react';
+import { Plus, Trash2, Edit, Save, Layers, ChevronLeft, ChevronRight, Check, Eye, EyeOff, LayoutGrid, DollarSign, RotateCw, Pencil } from 'lucide-react';
 import api from '../api';
 import Layout from '../components/Layout';
 import SearchModal from '../components/SearchModal';
 import DeleteCardModal from '../components/DeleteCardModal';
+import EditCardOptionsModal from '../components/EditCardOptionsModal';
 import CardDetailsModal from '../components/CardDetailsModal';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { Button } from '../components/ui/Button';
@@ -59,7 +60,7 @@ const SortableCard = ({
   // index,
   isEditMode,
   onClick,
-  onRemove,
+  onEditAction,
   grayOutUnpurchased,
   onTogglePurchased,
   showPrices,
@@ -69,7 +70,7 @@ const SortableCard = ({
   index: number;
   isEditMode: boolean;
   onClick: () => void;
-  onRemove: () => void;
+  onEditAction: () => void;
   grayOutUnpurchased: boolean;
   onTogglePurchased: (isPurchased: boolean) => void;
   showPrices: boolean;
@@ -91,17 +92,17 @@ const SortableCard = ({
     opacity: isDragging ? 0.5 : 1,
   };
 
-  // Separate handlers for delete to prevent drag
-  const handleDeleteMouseDown = (e: React.MouseEvent) => {
+  // Separate handlers for delete/edit to prevent drag
+  const handleEditMouseDown = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
-    onRemove();
+    onEditAction();
   };
 
-  const handleDeleteTouchStart = (e: React.TouchEvent) => {
+  const handleEditTouchStart = (e: React.TouchEvent) => {
     e.stopPropagation();
     e.preventDefault();
-    onRemove();
+    onEditAction();
   };
 
   const handleTogglePurchased = (e: React.MouseEvent) => {
@@ -207,12 +208,12 @@ const SortableCard = ({
 
           {isEditMode && (
             <button
-              onMouseDown={handleDeleteMouseDown}
-              onTouchStart={handleDeleteTouchStart}
-              className="absolute top-1 right-1 bg-red-600/90 text-white p-1.5 rounded-full hover:bg-red-700 shadow-xl z-50 transition-all hover:scale-110 backdrop-blur-sm"
+              onMouseDown={handleEditMouseDown}
+              onTouchStart={handleEditTouchStart}
+              className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-blue-600/90 text-white p-3 rounded-full hover:bg-blue-700 shadow-xl z-50 transition-all hover:scale-110 backdrop-blur-sm"
               style={{ pointerEvents: 'auto' }}
             >
-              <Trash2 className="w-3.5 h-3.5" />
+              <Pencil className="w-5 h-5" />
             </button>
           )}
 
@@ -241,11 +242,13 @@ const BinderView: React.FC = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
+  const [pendingReplaceCardId, setPendingReplaceCardId] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [replacementMode, setReplacementMode] = useState<'SWAP' | 'INSERT'>('SWAP');
   const [selectedCard, setSelectedCard] = useState<CardType | null>(null);
   const [currentPage, setCurrentPage] = useState(0);
   const [deleteConfirm, setDeleteConfirm] = useState<{ cardId: string; cardName: string } | null>(null);
+  const [editCardTarget, setEditCardTarget] = useState<{ cardId: string; cardName: string; positionIndex: number } | null>(null);
   const [bulkMode, setBulkMode] = useState(false);
   const [showPrices, setShowPrices] = useState(false);
   const { toast } = useToast();
@@ -348,8 +351,10 @@ const BinderView: React.FC = () => {
             pageSize * 2 // At least 2 pages
           );
 
-          const cardsPerView = pageSize * (isMobile ? 1 : 2);
-          const totalViews = Math.ceil(totalSlots / cardsPerView);
+          const totalPages = totalSlots / pageSize;
+          const totalViews = isMobile
+            ? totalPages
+            : Math.ceil((totalPages + 1) / 2);
 
           if (e.key === 'ArrowRight') {
             e.preventDefault();
@@ -400,6 +405,17 @@ const BinderView: React.FC = () => {
           }
         } catch (e) {
           console.warn('Failed to parse TCGPlayer URL', e);
+        }
+      }
+
+      if (pendingReplaceCardId) {
+        try {
+          await api.delete(`/binders/${binder.id}/cards/${pendingReplaceCardId}`);
+          setPendingReplaceCardId(null);
+        } catch (e) {
+          console.error('Failed to delete pending replace card', e);
+          // Fallback? If delete fails, we might end up with two cards or error?
+          // Proceeding anyway.
         }
       }
 
@@ -460,43 +476,101 @@ const BinderView: React.FC = () => {
     setShowSearch(true);
   };
 
-  const handleRemoveCard = async (cardId: string, cardName: string) => {
-    if (!binder) return;
-    setDeleteConfirm({ cardId, cardName });
+  const handleEditCardClick = (cardId: string, cardName: string, positionIndex: number) => {
+    setEditCardTarget({ cardId, cardName, positionIndex });
   };
 
-  const confirmRemoveCard = async (shiftCards: boolean) => {
-    if (!binder || !deleteConfirm) return;
+  const executeDeleteCard = async (cardId: string, shiftCards: boolean, positionIndex: number) => {
+    if (!binder) return;
 
     try {
       // Delete the card
-      await api.delete(`/binders/${binder.id}/cards/${deleteConfirm.cardId}`);
+      await api.delete(`/binders/${binder.id}/cards/${cardId}`);
 
       // If shift mode, reorder all cards after the deleted position
       if (shiftCards) {
-        const deletedCard = binder.cards.find(c => c.id === deleteConfirm.cardId);
-        if (deletedCard) {
-          const cardsToShift = binder.cards.filter(
-            c => c.positionIndex > deletedCard.positionIndex
-          );
+        // We need current state of cards, excluding the one we just deleted (optimistic or fetched)
+        // Since we already deleted it, let's look at existing binder.cards
+        const cardsToShift = binder.cards.filter(
+          c => c.positionIndex > positionIndex && c.id !== cardId
+        );
 
-          if (cardsToShift.length > 0) {
-            const moves = cardsToShift.map(c => ({
-              cardId: c.id,
-              newPosition: c.positionIndex - 1
-            }));
+        if (cardsToShift.length > 0) {
+          const moves = cardsToShift.map(c => ({
+            cardId: c.id,
+            newPosition: c.positionIndex - 1
+          }));
 
-            await api.put(`/binders/${binder.id}/reorder`, { moves });
-          }
+          await api.put(`/binders/${binder.id}/reorder`, { moves });
         }
       }
 
-      setDeleteConfirm(null);
       fetchBinder();
     } catch (error) {
-      console.error('Failed to remove card');
-      setDeleteConfirm(null);
+      console.error('Failed to remove/shift card', error);
+      fetchBinder();
     }
+  };
+
+  const handleEditOption = async (option: 'DELETE_EMPTY' | 'DELETE_SHIFT' | 'REPLACE' | 'INSERT') => {
+    if (!binder || !editCardTarget) return;
+
+    const { cardId, positionIndex } = editCardTarget;
+    setEditCardTarget(null); // Close modal
+
+    switch (option) {
+      case 'DELETE_EMPTY':
+        await executeDeleteCard(cardId, false, positionIndex);
+        break;
+
+      case 'DELETE_SHIFT':
+        await executeDeleteCard(cardId, true, positionIndex);
+        break;
+
+      case 'REPLACE':
+        // Set pending replace and open search. Do NOT delete yet.
+        setPendingReplaceCardId(cardId);
+        setSelectedSlot(positionIndex);
+        setBulkMode(false);
+        setShowSearch(true);
+        break;
+
+      case 'INSERT':
+        // Shift cards backward (making room at this index), then open search for this slot
+        // "Shift backwards" = move items at >= positionIndex to positionIndex + 1
+        try {
+          const cardsToShift = binder.cards.filter(c => c.positionIndex >= positionIndex);
+          if (cardsToShift.length > 0) {
+            const moves = cardsToShift.map(c => ({
+              cardId: c.id,
+              newPosition: c.positionIndex + 1
+            }));
+            await api.put(`/binders/${binder.id}/reorder`, { moves });
+            await fetchBinder(); // Refresh to ensure slots are correct
+          }
+          setSelectedSlot(positionIndex);
+          setBulkMode(false);
+          setShowSearch(true);
+        } catch (error) {
+          console.error('Failed to shift for insert', error);
+        }
+        break;
+    }
+  };
+
+  // Legacy delete confirm logic can remain if needed for cleanup, or we can remove it if unused.
+  // We'll keep confirmRemoveCard linked to DeleteCardModal just in case,
+  // but modify handleRemoveCard to not be used directly by SortableCard anymore.
+
+  const confirmRemoveCard = async (shiftCards: boolean) => {
+    if (!binder || !deleteConfirm) return;
+    // We can reuse executeDeleteCard logic, but need positionIndex.
+    // Let's find it
+    const card = binder.cards.find(c => c.id === deleteConfirm.cardId);
+    if (card) {
+      await executeDeleteCard(card.id, shiftCards, card.positionIndex);
+    }
+    setDeleteConfirm(null);
   };
 
   const handleDragEnd = async (event: any) => {
@@ -677,18 +751,36 @@ const BinderView: React.FC = () => {
     return { id: `slot-${i}`, index: i, card };
   });
 
+  const totalPages = Math.ceil(slots.length / pageSize);
+
   // Calculate pages/views based on mobile state
-  // On Desktop: View = Spread (2 pages). On Mobile: View = Single Page.
-  const cardsPerView = pageSize * (isMobile ? 1 : 2);
-  const totalViews = Math.ceil(slots.length / cardsPerView);
+  // On Desktop: View = Spread (2 pages) but with book-like offset (Page 1 is right-only).
+  const totalViews = isMobile
+    ? totalPages
+    : Math.ceil((totalPages + 1) / 2);
 
   // Get current view slots
-  const currentViewStart = currentPage * cardsPerView;
-  const currentViewSlots = slots.slice(currentViewStart, currentViewStart + cardsPerView);
+  let currentViewSlots: typeof slots = [];
+  let leftPageSlots: typeof slots = [];
+  let rightPageSlots: typeof slots = [];
 
-  // For Desktop render, split into left/right pages
-  const leftPageSlots = isMobile ? [] : currentViewSlots.slice(0, pageSize);
-  const rightPageSlots = isMobile ? [] : currentViewSlots.slice(pageSize, pageSize * 2);
+  if (isMobile) {
+    const start = currentPage * pageSize;
+    currentViewSlots = slots.slice(start, start + pageSize);
+  } else {
+    const leftPageIndex = (2 * currentPage) - 1;
+    const rightPageIndex = 2 * currentPage;
+
+    if (currentPage > 0) {
+      const leftStart = leftPageIndex * pageSize;
+      leftPageSlots = slots.slice(leftStart, leftStart + pageSize);
+    }
+
+    const rightStart = rightPageIndex * pageSize;
+    if (rightStart < slots.length) {
+      rightPageSlots = slots.slice(rightStart, rightStart + pageSize);
+    }
+  }
 
   const getGridCols = () => {
     switch (binder.layout) {
@@ -939,7 +1031,7 @@ const BinderView: React.FC = () => {
                               setShowSearch(true);
                             }
                           }}
-                          onRemove={() => slot.card && handleRemoveCard(slot.card.id, slot.card.name)}
+                          onEditAction={() => slot.card && handleEditCardClick(slot.card.id, slot.card.name, slot.index)}
                           grayOutUnpurchased={binder.grayOutUnpurchased}
                           showPrices={showPrices}
                           onTogglePurchased={(isPurchased) => slot.card && handleTogglePurchased(slot.card.id, isPurchased)}
@@ -970,7 +1062,7 @@ const BinderView: React.FC = () => {
                                 setShowSearch(true);
                               }
                             }}
-                            onRemove={() => slot.card && handleRemoveCard(slot.card.id, slot.card.name)}
+                            onEditAction={() => slot.card && handleEditCardClick(slot.card.id, slot.card.name, slot.index)}
                             grayOutUnpurchased={binder.grayOutUnpurchased}
                             showPrices={showPrices}
                             onTogglePurchased={(isPurchased) => slot.card && handleTogglePurchased(slot.card.id, isPurchased)}
@@ -1001,7 +1093,7 @@ const BinderView: React.FC = () => {
                                 setShowSearch(true);
                               }
                             }}
-                            onRemove={() => slot.card && handleRemoveCard(slot.card.id, slot.card.name)}
+                            onEditAction={() => slot.card && handleEditCardClick(slot.card.id, slot.card.name, slot.index)}
                             grayOutUnpurchased={binder.grayOutUnpurchased}
                             showPrices={showPrices}
                             onTogglePurchased={(isPurchased) => slot.card && handleTogglePurchased(slot.card.id, isPurchased)}
@@ -1039,7 +1131,10 @@ const BinderView: React.FC = () => {
 
         <SearchModal
           isOpen={showSearch}
-          onClose={() => setShowSearch(false)}
+          onClose={() => {
+            setShowSearch(false);
+            setPendingReplaceCardId(null);
+          }}
           onSelectCard={handleAddCard}
         />
 
@@ -1048,6 +1143,13 @@ const BinderView: React.FC = () => {
           onClose={() => setDeleteConfirm(null)}
           onConfirm={confirmRemoveCard}
           cardName={deleteConfirm?.cardName || ''}
+        />
+
+        <EditCardOptionsModal
+          isOpen={!!editCardTarget}
+          onClose={() => setEditCardTarget(null)}
+          onOptionSelect={handleEditOption}
+          cardName={editCardTarget?.cardName || ''}
         />
 
         <ConfirmDialog
