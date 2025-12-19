@@ -125,8 +125,11 @@ const SortableCard = ({
       ref={setNodeRef}
       style={style}
       className={`relative box-border border-r border-b border-white/10 border-dashed bg-black/20 shadow-[inset_0_0_4px_rgba(0,0,0,0.3)] group touch-manipulation [perspective:1000px] ${isEditMode && card ? 'cursor-grab active:cursor-grabbing touch-none' : ''
-        } ${!card ? 'flex items-center justify-center cursor-pointer hover:bg-white/5' : 'hover:bg-white/5'}`}
-      onClick={!isEditMode ? onClick : undefined}
+        } ${(!card && isEditMode) || (card && !isEditMode)
+          ? 'flex items-center justify-center cursor-pointer hover:bg-white/5'
+          : ''
+        }`}
+      onClick={(!card && isEditMode) || (card && !isEditMode) ? onClick : undefined}
       {...(isEditMode && card ? { ...attributes, ...listeners } : {})}
     >
       {/* Gloss Overlay */}
@@ -166,14 +169,14 @@ const SortableCard = ({
               So if I put overlays outside the flipping div they will stay static.
           */}
         </div>
-      ) : (
+      ) : isEditMode ? (
         <div className="flex flex-col items-center justify-center gap-1 relative z-0">
           <div className="w-8 h-8 rounded-full bg-white/5 group-hover:bg-white/10 flex items-center justify-center transition-all">
             <Plus className="w-4 h-4 text-white/20 group-hover:text-white/40 transition-colors" />
           </div>
           <p className="text-[10px] text-white/20 group-hover:text-white/40 transition-colors font-medium tracking-wider">ADD CARD</p>
         </div>
-      )}
+      ) : null}
 
       {/* Static Overlays (Checkboxes, Trash, etc) - These sit on top of the flipping container */}
       {card && (
