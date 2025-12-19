@@ -124,36 +124,36 @@ const SortableCard = ({
     <div
       ref={setNodeRef}
       style={style}
-      className={`relative aspect-[63/88] rounded-lg border-2 group touch-manipulation [perspective:1000px] ${isEditMode && card ? 'cursor-grab active:cursor-grabbing touch-none' : ''
-        } ${!card
-          ? 'border-dashed border-yellow-900/30 hover:border-yellow-600/50 flex items-center justify-center cursor-pointer bg-gradient-to-br from-yellow-50/5 to-yellow-100/5 hover:from-yellow-50/10 hover:to-yellow-100/10'
-          : 'border-yellow-900/20 hover:border-yellow-600/40 shadow-md'
-        }`}
+      className={`relative box-border border-r border-b border-white/10 border-dashed bg-black/20 shadow-[inset_0_0_4px_rgba(0,0,0,0.3)] group touch-manipulation [perspective:1000px] ${isEditMode && card ? 'cursor-grab active:cursor-grabbing touch-none' : ''
+        } ${!card ? 'flex items-center justify-center cursor-pointer hover:bg-white/5' : 'hover:bg-white/5'}`}
       onClick={!isEditMode ? onClick : undefined}
       {...(isEditMode && card ? { ...attributes, ...listeners } : {})}
     >
+      {/* Gloss Overlay */}
+      <div className="absolute inset-0 pointer-events-none z-10 bg-gradient-to-br from-white/10 via-transparent to-white/5 opacity-30"></div>
+
       {card ? (
         <div className={`relative w-full h-full transition-all duration-500 [transform-style:preserve-3d] ${isFlipped ? '[transform:rotateY(180deg)]' : ''}`}>
 
           {/* Front Face */}
-          <div className="absolute inset-0 w-full h-full [backface-visibility:hidden]">
-            <div className="w-full h-full overflow-hidden rounded-md relative">
+          <div className="absolute inset-0 w-full h-full [backface-visibility:hidden] flex items-center justify-center">
+            <div className="aspect-[63/88] h-[94%] max-w-[94%] overflow-hidden rounded-[4.5%] relative shadow-md bg-[#111]">
               <img
                 src={card.imageUrl}
                 alt={card.name}
-                className={`w-full h-full object-cover transition-all duration-300 ${isGrayedOut ? 'grayscale brightness-75' : ''}`}
+                className={`w-full h-full object-fill transition-all duration-300 ${isGrayedOut ? 'grayscale brightness-75' : ''}`}
               />
             </div>
           </div>
 
           {/* Back Face */}
           {hasBack && (
-            <div className="absolute inset-0 w-full h-full [backface-visibility:hidden] [transform:rotateY(180deg)]">
-              <div className="w-full h-full overflow-hidden rounded-md relative">
+            <div className="absolute inset-0 w-full h-full [backface-visibility:hidden] [transform:rotateY(180deg)] flex items-center justify-center">
+              <div className="aspect-[63/88] h-[94%] max-w-[94%] overflow-hidden rounded-[4.5%] relative shadow-md bg-[#111]">
                 <img
                   src={card.imageUrlBack}
                   alt={card.name}
-                  className={`w-full h-full object-cover transition-all duration-300 ${isGrayedOut ? 'grayscale brightness-75' : ''}`}
+                  className={`w-full h-full object-fill transition-all duration-300 ${isGrayedOut ? 'grayscale brightness-75' : ''}`}
                 />
               </div>
             </div>
@@ -167,11 +167,11 @@ const SortableCard = ({
           */}
         </div>
       ) : (
-        <div className="flex flex-col items-center justify-center gap-1">
-          <div className="w-8 h-8 rounded-full bg-yellow-900/20 group-hover:bg-yellow-600/30 flex items-center justify-center transition-all">
-            <Plus className="w-4 h-4 text-yellow-900/40 group-hover:text-yellow-600/60 transition-colors" />
+        <div className="flex flex-col items-center justify-center gap-1 relative z-0">
+          <div className="w-8 h-8 rounded-full bg-white/5 group-hover:bg-white/10 flex items-center justify-center transition-all">
+            <Plus className="w-4 h-4 text-white/20 group-hover:text-white/40 transition-colors" />
           </div>
-          <p className="text-[10px] text-yellow-900/40 group-hover:text-yellow-600/60 transition-colors">Add Card</p>
+          <p className="text-[10px] text-white/20 group-hover:text-white/40 transition-colors font-medium tracking-wider">ADD CARD</p>
         </div>
       )}
 
@@ -997,7 +997,7 @@ const BinderView: React.FC = () => {
         <div ref={containerRef} className="relative flex-1 flex items-center justify-center overflow-hidden">
           {/* Binder Pages */}
           <div
-            className={`flex gap-1 justify-center items-center mx-auto transition-all duration-300 shadow-2xl rounded-2xl ${!containerSize.width ? 'opacity-0' : 'opacity-100'
+            className={`flex gap-0 justify-center items-center mx-auto transition-all duration-300 shadow-2xl rounded-2xl ${!containerSize.width ? 'opacity-0' : 'opacity-100'
               }`}
             style={getAspectStyle()}
           >
@@ -1011,42 +1011,23 @@ const BinderView: React.FC = () => {
                 {isMobile ? (
                   // Mobile Single Page View
                   <div
-                    className="relative bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-2xl shadow-2xl p-4 border-2 border-gray-700 w-full h-full flex flex-col justify-center"
+                    className="relative bg-zinc-950 rounded-xl shadow-2xl p-4 border border-gray-700/50 w-full h-full flex flex-col justify-center"
                   >
-                    <div className="absolute inset-0 bg-gradient-to-br from-yellow-50/[0.02] to-transparent rounded-2xl pointer-events-none"></div>
-                    <div className={`grid ${getGridCols()} relative z-10`}>
-                      {currentViewSlots.map((slot) => (
-                        <SortableCard
-                          key={slot.id}
-                          id={slot.id}
-                          index={slot.index}
-                          card={slot.card}
-                          isEditMode={isEditMode}
-                          onClick={() => {
-                            if (slot.card) {
-                              setSelectedCard(slot.card);
-                            } else {
-                              setSelectedSlot(slot.index);
-                              setBulkMode(false);
-                              setShowSearch(true);
-                            }
-                          }}
-                          onEditAction={() => slot.card && handleEditCardClick(slot.card.id, slot.card.name, slot.index)}
-                          grayOutUnpurchased={binder.grayOutUnpurchased}
-                          showPrices={showPrices}
-                          onTogglePurchased={(isPurchased) => slot.card && handleTogglePurchased(slot.card.id, isPurchased)}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  // Desktop Spread View
-                  <>
-                    <div className="relative bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-l-2xl shadow-2xl p-6 border-2 border-r-0 border-gray-700 w-full h-full flex flex-col justify-center">
-                      <div className="absolute inset-0 bg-gradient-to-br from-yellow-50/[0.02] to-transparent rounded-l-2xl pointer-events-none"></div>
+                    {/* Binder Texture Overlay */}
+                    <div className="absolute inset-0 opacity-[0.03] bg-[url('https://www.transparenttextures.com/patterns/leather.png')] pointer-events-none rounded-xl"></div>
 
-                      <div className={`grid ${getGridCols()} gap-2 h-full content-center relative z-10`}>
-                        {leftPageSlots.map((slot) => (
+                    {/* Page Sheet */}
+                    <div className="w-full h-full bg-[#111111]/90 rounded-sm shadow-[0_10px_25px_rgba(0,0,0,0.7)] border border-white/5 relative z-10 overflow-hidden flex">
+                      {/* Spine Gradient Overlay */}
+                      <div className="absolute left-0 top-0 bottom-0 w-3 bg-gradient-to-r from-black/60 to-transparent z-20 pointer-events-none"></div>
+
+                      {/* Spine Margin (Left side for mobile usually) */}
+                      <div className="w-3 h-full border-r border-white/10 border-dashed bg-white/5 py-4">
+                      </div>
+
+                      {/* Grid - using gap-0 and borders for seams */}
+                      <div className={`flex-1 grid ${getGridCols()} gap-0 w-full h-full border-t border-white/10 border-dashed bg-white/5`}>
+                        {currentViewSlots.map((slot) => (
                           <SortableCard
                             key={slot.id}
                             id={slot.id}
@@ -1070,35 +1051,87 @@ const BinderView: React.FC = () => {
                         ))}
                       </div>
                     </div>
+                  </div>
+                ) : (
+                  // Desktop Spread View
+                  <>
+                    <div className="relative bg-zinc-950 rounded-l-xl rounded-r-none shadow-2xl pl-3 py-3 pr-0 border border-gray-700/50 border-r-0 w-full h-full flex flex-col justify-center">
+                      <div className="absolute inset-0 opacity-[0.03] bg-[url('https://www.transparenttextures.com/patterns/leather.png')] pointer-events-none rounded-l-xl rounded-r-none"></div>
 
-                    <div className="w-px bg-gray-600"></div>
+                      {/* Page Sheet */}
+                      <div className="w-full h-full mx-auto bg-[#111111]/90 rounded-sm shadow-[8px_8px_20px_rgba(0,0,0,0.6)] border border-white/5 relative z-10 overflow-hidden flex">
+                        {/* Spine Gradient Overlay */}
+                        <div className="absolute right-0 top-0 bottom-0 w-5 bg-gradient-to-l from-black/60 to-transparent z-20 pointer-events-none"></div>
 
-                    <div className="relative bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-r-2xl shadow-2xl p-6 border-2 border-l-0 border-gray-700 w-full h-full flex flex-col justify-center">
-                      <div className="absolute inset-0 bg-gradient-to-br from-yellow-50/[0.02] to-transparent rounded-r-2xl pointer-events-none"></div>
+                        {/* Grid Area */}
+                        <div className={`flex-1 grid ${getGridCols()} gap-0 w-full h-full border-t border-l border-white/10 border-dashed bg-white/5`}>
+                          {leftPageSlots.map((slot) => (
+                            <SortableCard
+                              key={slot.id}
+                              id={slot.id}
+                              index={slot.index}
+                              card={slot.card}
+                              isEditMode={isEditMode}
+                              onClick={() => {
+                                if (slot.card) {
+                                  setSelectedCard(slot.card);
+                                } else {
+                                  setSelectedSlot(slot.index);
+                                  setBulkMode(false);
+                                  setShowSearch(true);
+                                }
+                              }}
+                              onEditAction={() => slot.card && handleEditCardClick(slot.card.id, slot.card.name, slot.index)}
+                              grayOutUnpurchased={binder.grayOutUnpurchased}
+                              showPrices={showPrices}
+                              onTogglePurchased={(isPurchased) => slot.card && handleTogglePurchased(slot.card.id, isPurchased)}
+                            />
+                          ))}
+                        </div>
 
-                      <div className={`grid ${getGridCols()} gap-2 h-full content-center relative z-10`}>
-                        {rightPageSlots.map((slot) => (
-                          <SortableCard
-                            key={slot.id}
-                            id={slot.id}
-                            index={slot.index}
-                            card={slot.card}
-                            isEditMode={isEditMode}
-                            onClick={() => {
-                              if (slot.card) {
-                                setSelectedCard(slot.card);
-                              } else {
-                                setSelectedSlot(slot.index);
-                                setBulkMode(false);
-                                setShowSearch(true);
-                              }
-                            }}
-                            onEditAction={() => slot.card && handleEditCardClick(slot.card.id, slot.card.name, slot.index)}
-                            grayOutUnpurchased={binder.grayOutUnpurchased}
-                            showPrices={showPrices}
-                            onTogglePurchased={(isPurchased) => slot.card && handleTogglePurchased(slot.card.id, isPurchased)}
-                          />
-                        ))}
+                        {/* Spine Margin (Right side) */}
+                        <div className="w-5 h-full border-l border-white/10 border-dashed bg-white/5 flex flex-col justify-center items-center">
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="relative bg-zinc-950 rounded-r-xl rounded-l-none shadow-2xl pr-3 py-3 pl-0 border border-gray-700/50 border-l-0 w-full h-full flex flex-col justify-center">
+                      <div className="absolute inset-0 opacity-[0.03] bg-[url('https://www.transparenttextures.com/patterns/leather.png')] pointer-events-none rounded-r-xl rounded-l-none"></div>
+
+                      {/* Page Sheet */}
+                      <div className="w-full h-full mx-auto bg-[#111111]/90 rounded-sm shadow-[-8px_8px_20px_rgba(0,0,0,0.6)] border border-white/5 relative z-10 overflow-hidden flex">
+                        {/* Spine Gradient Overlay */}
+                        <div className="absolute left-0 top-0 bottom-0 w-5 bg-gradient-to-r from-black/60 to-transparent z-20 pointer-events-none"></div>
+
+                        {/* Spine Margin (Left side) */}
+                        <div className="w-5 h-full border-r border-white/10 border-dashed bg-white/5 flex flex-col justify-center items-center">
+                        </div>
+
+                        {/* Grid Area */}
+                        <div className={`flex-1 grid ${getGridCols()} gap-0 w-full h-full border-t border-r border-white/10 border-dashed bg-white/5`}>
+                          {rightPageSlots.map((slot) => (
+                            <SortableCard
+                              key={slot.id}
+                              id={slot.id}
+                              index={slot.index}
+                              card={slot.card}
+                              isEditMode={isEditMode}
+                              onClick={() => {
+                                if (slot.card) {
+                                  setSelectedCard(slot.card);
+                                } else {
+                                  setSelectedSlot(slot.index);
+                                  setBulkMode(false);
+                                  setShowSearch(true);
+                                }
+                              }}
+                              onEditAction={() => slot.card && handleEditCardClick(slot.card.id, slot.card.name, slot.index)}
+                              grayOutUnpurchased={binder.grayOutUnpurchased}
+                              showPrices={showPrices}
+                              onTogglePurchased={(isPurchased) => slot.card && handleTogglePurchased(slot.card.id, isPurchased)}
+                            />
+                          ))}
+                        </div>
                       </div>
                     </div>
                   </>
