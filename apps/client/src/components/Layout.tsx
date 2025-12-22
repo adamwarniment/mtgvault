@@ -231,6 +231,20 @@ const Layout: React.FC<{ children: React.ReactNode; allowScroll?: boolean }> = (
                                     </button>
                                 </div>
                             </div>
+
+                            {/* Account Section */}
+                            <div>
+                                <label className="text-sm font-medium mb-3 block" style={{ color: 'var(--text-secondary)' }}>
+                                    Account
+                                </label>
+                                <button
+                                    onClick={handleLogout}
+                                    className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/10 transition-all font-medium"
+                                >
+                                    <LogOut className="w-5 h-5" />
+                                    Sign Out
+                                </button>
+                            </div>
                         </div>
 
                         <div className="flex justify-end gap-3 mt-6">
