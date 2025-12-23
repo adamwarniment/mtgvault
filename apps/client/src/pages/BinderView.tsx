@@ -69,6 +69,8 @@ const SortableCard = ({
   grayOutUnpurchased,
   onTogglePurchased,
   showPrices,
+  isSelected,
+  onToggleSelection,
 }: {
   id: string;
   card?: CardType;
@@ -79,6 +81,8 @@ const SortableCard = ({
   grayOutUnpurchased: boolean;
   onTogglePurchased: (isPurchased: boolean) => void;
   showPrices: boolean;
+  isSelected: boolean;
+  onToggleSelection: () => void;
 }) => {
   const {
     attributes,
@@ -225,6 +229,24 @@ const SortableCard = ({
             </button>
           )}
 
+          {/* Selection Checkbox (Edit Mode) */}
+          {isEditMode && (
+            <div className="absolute top-2 left-2 z-50">
+              <div
+                className={`w-6 h-6 rounded-full border-2 flex items-center justify-center cursor-pointer transition-colors shadow-lg ${isSelected
+                  ? 'bg-blue-500 border-blue-500 text-white'
+                  : 'bg-black/50 border-white/50 hover:bg-black/70'
+                  }`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleSelection();
+                }}
+              >
+                {isSelected && <Check className="w-3.5 h-3.5" />}
+              </div>
+            </div>
+          )}
+
           {!isEditMode && (
             <div className={`absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent transition-opacity flex flex-col justify-end p-2 pointer-events-none rounded-lg ${showPrices ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
               <div className="flex justify-between items-end w-full">
@@ -265,6 +287,10 @@ const BinderView: React.FC = () => {
   const [showPageList, setShowPageList] = useState(false); // Mobile page list toggle
 
   const [editPageTarget, setEditPageTarget] = useState<{ pageIndex: number; initialName: string; initialIcon: string } | null>(null);
+
+  const [selectedCardIds, setSelectedCardIds] = useState<string[]>([]);
+  const [showMassEditModal, setShowMassEditModal] = useState(false);
+  const [pendingMassAction, setPendingMassAction] = useState<'REPLACE' | 'INSERT' | null>(null);
 
   // State for mobile/single-view detection (increased breakpoint for better portrait tablet support)
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
@@ -392,7 +418,33 @@ const BinderView: React.FC = () => {
   };
 
   const handleAddCard = async (scryfallCard: any) => {
-    if (!binder || selectedSlot === null) return;
+    if (!binder) return;
+
+    // Handle Mass Actions
+    if (pendingMassAction) {
+      if (pendingMassAction === 'REPLACE') {
+        const targets = [...selectedCardIds]; // Capture current selection
+        // Clear selection/mode
+        setPendingMassAction(null);
+        setSelectedCardIds([]);
+        setShowSearch(false);
+        setBulkMode(false);
+
+        // Execute Mass Replace
+        await executeMassReplace(targets, scryfallCard);
+      } else if (pendingMassAction === 'INSERT') {
+        const targets = [...selectedCardIds];
+        setPendingMassAction(null);
+        setSelectedCardIds([]);
+        setShowSearch(false);
+        setBulkMode(false);
+
+        await executeMassInsert(targets, scryfallCard);
+      }
+      return;
+    }
+
+    if (selectedSlot === null) return;
 
     try {
       let imageUrl = scryfallCard.image_uris?.normal || '';
@@ -582,6 +634,274 @@ const BinderView: React.FC = () => {
       await executeDeleteCard(card.id, shiftCards, card.positionIndex);
     }
     setDeleteConfirm(null);
+  };
+
+  const handleToggleCardSelection = (cardId: string) => {
+    setSelectedCardIds(prev => {
+      if (prev.includes(cardId)) {
+        return prev.filter(id => id !== cardId);
+      } else {
+        return [...prev, cardId];
+      }
+    });
+  };
+
+  const executeMassDelete = async (cardIds: string[], shift: boolean) => {
+    if (!binder) return;
+    try {
+      // 1. Delete all cards
+      await Promise.all(cardIds.map(id => api.delete(`/binders/${binder.id}/cards/${id}`)));
+
+      // 2. If shifting, recalculate positions for ALL remaining cards
+      if (shift) {
+        // Get all cards EXCEPT the deleted ones
+        const remainingCards = binder.cards
+          .filter(c => !cardIds.includes(c.id))
+          .sort((a, b) => a.positionIndex - b.positionIndex);
+
+        // Assign new indices: 0, 1, 2...
+        // Actually, we should preserve original gaps? 
+        // "Shift Forward" usually means closing gaps created by deletion.
+        // It implies collapsing the array.
+        // But do we collapse into index 0? Or just shift specific cards?
+        // Standard "Delete and Shift" behavior usually means:
+        // Everything AFTER the deleted card moves up (index - 1).
+        // With multiple deletions, it's safer to re-index the whole sequence or just compact it.
+        // Let's compact everything past the *first* deletion point?
+        // Or simply compact the entire binder?
+        // Let's stick to: "Close the gaps created by these deletions".
+        // This effectively means re-indexing existing cards to be contiguous?
+        // Wait, binder pages might have intentional gaps.
+        // "Delete and Shift" on a single card:
+        // "Delete this card and shift subsequent cards forward [to fill the gap]".
+        // It doesn't close *previous* gaps.
+        // So: For each deleted card at Position P:
+        // Everyone at > P moves to P-1.
+        // If we have multiple deletions, we must process them carefully or just re-calculate locally.
+
+        // Accurate Logic:
+        // 1. Mark slots to be removed.
+        // 2. Iterate through all cards sorted by position.
+        // 3. For each card, calculate how many removed slots were *before* it.
+        // 4. NewPos = OldPos - CountOfRemovedBeforeIt.
+
+        const deletedPositions = binder.cards
+          .filter(c => cardIds.includes(c.id))
+          .map(c => c.positionIndex)
+          .sort((a, b) => a - b);
+
+        const cardsToUpdate = [];
+
+        // We only need to shift cards that are AFTER the first deleted position.
+        // But simpler to iterate all cards that are NOT deleted.
+        // remainingCards is already defined above.
+
+        for (const card of remainingCards) {
+          const shifts = deletedPositions.filter(p => p < card.positionIndex).length;
+          if (shifts > 0) {
+            cardsToUpdate.push({
+              cardId: card.id,
+              newPosition: card.positionIndex - shifts
+            });
+          }
+        }
+
+        if (cardsToUpdate.length > 0) {
+          await api.put(`/binders/${binder.id}/reorder`, { moves: cardsToUpdate });
+        }
+      }
+
+      setSelectedCardIds([]);
+      fetchBinder();
+      toast('Cards deleted', 'success');
+    } catch (e) {
+      console.error('Mass delete failed', e);
+      toast('Failed to delete cards', 'error');
+    }
+  };
+
+  const executeMassReplace = async (targetIds: string[], scryfallCard: any) => {
+    if (!binder) return;
+    try {
+      // Delete all targets
+      await Promise.all(targetIds.map(id => api.delete(`/binders/${binder.id}/cards/${id}`)));
+
+      // Add new cards at same positions
+      // We need the positions of the deleted cards
+      const targetCards = binder.cards.filter(c => targetIds.includes(c.id));
+
+      // Prepare card data
+      let imageUrl = scryfallCard.image_uris?.normal || '';
+      let imageUrlBack = '';
+      if (!imageUrl && scryfallCard.card_faces?.length === 2) {
+        imageUrl = scryfallCard.card_faces[0].image_uris?.normal || '';
+        imageUrlBack = scryfallCard.card_faces[1].image_uris?.normal || '';
+      }
+      let tcgplayerUrl = null;
+      if (scryfallCard.purchase_uris?.tcgplayer) {
+        tcgplayerUrl = scryfallCard.purchase_uris.tcgplayer.split('?')[0]; // Simple clean
+      }
+
+      const price = scryfallCard.prices?.usd ? parseFloat(scryfallCard.prices.usd) : null;
+
+      // Add cards in parallel
+      await Promise.all(targetCards.map(c => api.post(`/binders/${binder.id}/cards`, {
+        scryfallId: scryfallCard.id,
+        positionIndex: c.positionIndex,
+        imageUrl,
+        imageUrlBack,
+        name: scryfallCard.name,
+        set: scryfallCard.set,
+        collectorNumber: scryfallCard.collector_number,
+        priceUsd: price,
+        isPurchased: true,
+        tcgplayerUrl
+      })));
+
+      fetchBinder();
+      toast('Cards replaced', 'success');
+    } catch (e) {
+      console.error('Mass replace failed', e);
+      toast('Mass replace failed', 'error');
+    }
+  };
+
+  const executeMassInsert = async (targetIds: string[], scryfallCard: any) => {
+    if (!binder) return;
+    // Strategy: 
+    // 1. Identify target positions from selected cards.
+    // 2. Sort positions Ascending.
+    // 3. For each position P:
+    //    Shift everything >= P by +1.
+    //    Insert at P.
+    // If we simply shift for P1, then P2 might move?
+    // "Selected Cards" identifies the *initial* slots.
+    // If I select card at 2 and 5.
+    // I want a new card at 2 (old 2 becomes 3).
+    // I want a new card at 5 (old 5 becomes 6? Or since we shifted at 2, it's now at 6... so we insert at 6?)
+    // Usually UI selection applies to the visual state *before* operation.
+    // Check logic: "Insert Card" on single card at P -> Shifts cards >= P to P+1. Inserts at P.
+
+    // If we do this sequentially from Highest to Lowest, we avoid index invalidation of lower items?
+    // P = 2, 5.
+    // Process 5: Shift >= 5 to +1. Insert at 5. (Old 2 is still at 2).
+    // Process 2: Shift >= 2 to +1. Insert at 2. (The newly inserted 5 becomes 6. Old 5->6 becomes 7).
+    // This works!
+
+    try {
+      const targetPositions = binder.cards
+        .filter(c => targetIds.includes(c.id))
+        .map(c => c.positionIndex)
+        .sort((a, b) => b - a); // Descending
+
+      // Prepare card data
+      let imageUrl = scryfallCard.image_uris?.normal || '';
+      let imageUrlBack = '';
+      if (!imageUrl && scryfallCard.card_faces?.length === 2) {
+        imageUrl = scryfallCard.card_faces[0].image_uris?.normal || '';
+        imageUrlBack = scryfallCard.card_faces[1].image_uris?.normal || '';
+      }
+      let tcgplayerUrl = scryfallCard.purchase_uris?.tcgplayer?.split('?')[0] || null;
+      const price = scryfallCard.prices?.usd ? parseFloat(scryfallCard.prices.usd) : null;
+
+      // We must do this sequentially to ensure shifts are correct?
+      // Actually, we can calculate the FINAL state of all cards and send one REORDER.
+      // Then insert the new cards.
+
+      // Let's do One Big Reorder.
+      // Original: [C1(1), C2(2), C3(3), C4(4)]
+      // Insert at 2, 4.
+      // Result: [C1(1), N1(2), C2(3), C3(4), N2(5), C4(6)]
+      // Logic:
+      // For each existing card C_old at Pos_old:
+      //   How many insertions are <= Pos_old? Let this be K.
+      //   Pos_new = Pos_old + K.
+      // And inserts happen at:
+      //   For each insertion target T (original index):
+      //   How many insertions are < T? Let this be J.
+      //   Pos_insert = T + J.
+
+      // Wait, if I insert at 2.
+      // Original 2 becomes 3.
+      // So new card is at 2.
+      // If I also insert at 4.
+      // Original 4 becomes 4 + (1 because of insertion at 2) + (1 because of insertion at 4?) = 6?
+      // Yes.
+
+      // Sort targets ascending: T1 < T2 < ...
+      // For existing card at P:
+      //   Shift = Count(Target <= P).
+      //   NewP = P + Shift.
+      // For insertion at T_i (where T_i is from original set):
+      //   Shift = Count(Target < T_i).
+      //   Pos = T_i + Shift.
+
+      const sortedTargets = targetPositions.sort((a, b) => a - b); // Ascending
+
+      // 1. Shift existing cards
+      const moves = binder.cards.map(c => {
+        const shifts = sortedTargets.filter(t => t <= c.positionIndex).length;
+        if (shifts > 0) {
+          return { cardId: c.id, newPosition: c.positionIndex + shifts };
+        }
+        return null;
+      }).filter(Boolean) as { cardId: string, newPosition: number }[];
+
+      if (moves.length > 0) {
+        await api.put(`/binders/${binder.id}/reorder`, { moves });
+      }
+
+      // 2. Insert new cards
+      // Note: "moves" update is async, wait for it? Yes.
+
+      await Promise.all(sortedTargets.map((targetPos, index) => {
+        // targetPos is original.
+        // It shifts by number of insertions BEFORE it (index).
+        const newPos = targetPos + index;
+
+        return api.post(`/binders/${binder.id}/cards`, {
+          scryfallId: scryfallCard.id,
+          positionIndex: newPos,
+          imageUrl,
+          imageUrlBack,
+          name: scryfallCard.name,
+          set: scryfallCard.set,
+          collectorNumber: scryfallCard.collector_number,
+          priceUsd: price,
+          isPurchased: true,
+          tcgplayerUrl
+        });
+      }));
+
+      fetchBinder();
+      toast('Mass insert complete', 'success');
+
+    } catch (e) {
+      console.error("Mass insert failed", e);
+      toast("Mass insert failed", 'error');
+    }
+  };
+
+
+  const handleMassEditOption = async (option: 'DELETE_EMPTY' | 'DELETE_SHIFT' | 'REPLACE' | 'INSERT') => {
+    setShowMassEditModal(false);
+
+    switch (option) {
+      case 'DELETE_EMPTY':
+        await executeMassDelete(selectedCardIds, false);
+        break;
+      case 'DELETE_SHIFT':
+        await executeMassDelete(selectedCardIds, true);
+        break;
+      case 'REPLACE':
+        setPendingMassAction('REPLACE');
+        setShowSearch(true);
+        break;
+      case 'INSERT':
+        setPendingMassAction('INSERT');
+        setShowSearch(true);
+        break;
+    }
   };
 
   const handleDragEnd = async (event: any) => {
@@ -852,6 +1172,13 @@ const BinderView: React.FC = () => {
     }
   }
 
+  const getPageValue = (pageSlots: typeof slots) =>
+    pageSlots.reduce((sum, s) => sum + (s.card?.priceUsd || 0), 0);
+
+  const currentViewValue = getPageValue(currentViewSlots);
+  const leftPageValue = getPageValue(leftPageSlots);
+  const rightPageValue = getPageValue(rightPageSlots);
+
   const getGridCols = () => {
     switch (binder.layout) {
       case 'GRID_2x2': return 'grid-cols-2';
@@ -1006,6 +1333,19 @@ const BinderView: React.FC = () => {
 
                 <div className="w-full h-px bg-gray-800 my-1" />
 
+                {/* Mass Edit Button */}
+                {selectedCardIds.length > 0 && (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => setShowMassEditModal(true)}
+                    className="w-full gap-2 bg-green-600 hover:bg-green-700 text-white shadow-lg animate-in fade-in slide-in-from-right-4"
+                  >
+                    <Edit className="w-4 h-4" />
+                    Edit Selected ({selectedCardIds.length})
+                  </Button>
+                )}
+
                 <Button
                   variant="ghost"
                   size="sm"
@@ -1149,6 +1489,11 @@ const BinderView: React.FC = () => {
                   <span className="text-white font-medium text-sm tracking-wide">
                     {binder.pageLabels?.[String(currentPage)] || `Page ${currentPage + 1}`}
                   </span>
+                  {showPrices && (
+                    <span className="text-green-400 font-mono text-xs font-bold bg-black/50 px-1.5 py-0.5 rounded ml-1">
+                      ${currentViewValue.toFixed(2)}
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -1193,6 +1538,8 @@ const BinderView: React.FC = () => {
                             grayOutUnpurchased={binder.grayOutUnpurchased}
                             showPrices={showPrices}
                             onTogglePurchased={(isPurchased) => slot.card && handleTogglePurchased(slot.card.id, isPurchased)}
+                            isSelected={slot.card ? selectedCardIds.includes(slot.card.id) : false}
+                            onToggleSelection={() => slot.card && handleToggleCardSelection(slot.card.id)}
                           />
                         ))}
                       </div>
@@ -1232,6 +1579,8 @@ const BinderView: React.FC = () => {
                               grayOutUnpurchased={binder.grayOutUnpurchased}
                               showPrices={showPrices}
                               onTogglePurchased={(isPurchased) => slot.card && handleTogglePurchased(slot.card.id, isPurchased)}
+                              isSelected={slot.card ? selectedCardIds.includes(slot.card.id) : false}
+                              onToggleSelection={() => slot.card && handleToggleCardSelection(slot.card.id)}
                             />
                           ))}
                         </div>
@@ -1257,6 +1606,11 @@ const BinderView: React.FC = () => {
                             <span className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--text-primary)' }}>
                               {binder.pageLabels?.[String(leftPageIndex)] || `Page ${leftPageIndex + 1}`}
                             </span>
+                            {showPrices && (
+                              <span className="text-green-400 font-mono text-xs font-bold bg-black/50 px-1.5 py-0.5 rounded ml-1">
+                                ${leftPageValue.toFixed(2)}
+                              </span>
+                            )}
                           </div>
                         </div>
                       )}
@@ -1299,6 +1653,8 @@ const BinderView: React.FC = () => {
                               grayOutUnpurchased={binder.grayOutUnpurchased}
                               showPrices={showPrices}
                               onTogglePurchased={(isPurchased) => slot.card && handleTogglePurchased(slot.card.id, isPurchased)}
+                              isSelected={slot.card ? selectedCardIds.includes(slot.card.id) : false}
+                              onToggleSelection={() => slot.card && handleToggleCardSelection(slot.card.id)}
                             />
                           ))}
                         </div>
@@ -1320,6 +1676,11 @@ const BinderView: React.FC = () => {
                             <span className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--text-primary)' }}>
                               {binder.pageLabels?.[String(rightPageIndex)] || `Page ${rightPageIndex + 1}`}
                             </span>
+                            {showPrices && (
+                              <span className="text-green-400 font-mono text-xs font-bold bg-black/50 px-1.5 py-0.5 rounded ml-1">
+                                ${rightPageValue.toFixed(2)}
+                              </span>
+                            )}
                           </div>
                         </div>
                       )}
@@ -1450,6 +1811,13 @@ const BinderView: React.FC = () => {
           onClose={() => setEditCardTarget(null)}
           onOptionSelect={handleEditOption}
           cardName={editCardTarget?.cardName || ''}
+        />
+
+        <EditCardOptionsModal
+          isOpen={showMassEditModal}
+          onClose={() => setShowMassEditModal(false)}
+          onOptionSelect={handleMassEditOption}
+          count={selectedCardIds.length}
         />
 
         <ConfirmDialog

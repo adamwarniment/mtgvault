@@ -4,7 +4,8 @@ import { Button } from './ui/Button';
 
 interface EditCardOptionsModalProps {
     isOpen: boolean;
-    cardName: string;
+    cardName?: string;
+    count?: number;
     onClose: () => void;
     onOptionSelect: (option: 'DELETE_EMPTY' | 'DELETE_SHIFT' | 'REPLACE' | 'INSERT') => void;
 }
@@ -12,37 +13,40 @@ interface EditCardOptionsModalProps {
 const EditCardOptionsModal: React.FC<EditCardOptionsModalProps> = ({
     isOpen,
     cardName,
+    count = 1,
     onClose,
     onOptionSelect,
 }) => {
     if (!isOpen) return null;
 
+    const isMassEdit = count > 1;
+
     const options = [
         {
             id: 'DELETE_EMPTY',
-            title: 'Delete (Keep Empty)',
-            description: 'Delete the card and keep the slot empty',
+            title: isMassEdit ? `Delete ${count} Cards (Keep Empty)` : 'Delete (Keep Empty)',
+            description: isMassEdit ? 'Delete selected cards and keep slots empty' : 'Delete the card and keep the slot empty',
             icon: Eraser,
             color: 'red',
         },
         {
             id: 'DELETE_SHIFT',
-            title: 'Delete (Shift Cards)',
-            description: 'Delete the card and shift subsequent cards forward',
+            title: isMassEdit ? `Delete ${count} Cards (Shift)` : 'Delete (Shift Cards)',
+            description: isMassEdit ? 'Delete cards and shift subsequent cards forward' : 'Delete the card and shift subsequent cards forward',
             icon: ArrowLeftToLine,
             color: 'orange',
         },
         {
             id: 'REPLACE',
-            title: 'Replace Card',
-            description: 'Swap this card with a different one',
+            title: isMassEdit ? `Replace ${count} Cards` : 'Replace Card',
+            description: isMassEdit ? 'Replace selected cards with a new one' : 'Swap this card with a different one',
             icon: RefreshCw,
             color: 'blue',
         },
         {
             id: 'INSERT',
-            title: 'Insert Card',
-            description: 'Shift cards backward and insert a new card here',
+            title: isMassEdit ? `Insert ${count} Cards` : 'Insert Card',
+            description: isMassEdit ? 'Insert copies of a new card at selected positions' : 'Shift cards backward and insert a new card here',
             icon: ArrowRightFromLine,
             color: 'green',
         },
@@ -70,8 +74,8 @@ const EditCardOptionsModal: React.FC<EditCardOptionsModalProps> = ({
                             <BookOpen className="w-5 h-5 text-blue-500" />
                         </div>
                         <div>
-                            <h2 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Edit Card</h2>
-                            <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{cardName}</p>
+                            <h2 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>{isMassEdit ? `Edit ${count} Cards` : 'Edit Card'}</h2>
+                            {!isMassEdit && <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{cardName}</p>}
                         </div>
                     </div>
                     <button
