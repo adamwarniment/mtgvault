@@ -51,6 +51,7 @@ interface Binder {
   layout: 'GRID_2x2' | 'GRID_3x3' | 'GRID_4x3';
   grayOutUnpurchased: boolean;
   cards: CardType[];
+  pageLabels?: Record<string, string>;
 }
 
 // --- Sortable Card Component ---
@@ -257,6 +258,7 @@ const BinderView: React.FC = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [showDeleteBinderConfirm, setShowDeleteBinderConfirm] = useState(false);
+  const [showPageList, setShowPageList] = useState(false); // Mobile page list toggle
 
   // State for mobile/single-view detection (increased breakpoint for better portrait tablet support)
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
@@ -696,12 +698,57 @@ const BinderView: React.FC = () => {
   const handleNameBlur = async () => {
     if (!binder) return;
     try {
-      await api.put(`/binders/${binder.id}`, { name: binder.name });
+      await api.put(`/binders/${binder.id}`, { name: binder.name, pageLabels: binder.pageLabels });
       toast('Binder renamed', 'success');
     } catch (error) {
       console.error('Failed to rename binder');
       toast('Failed to rename binder', 'error');
     }
+  };
+
+  const handlePageLabelChange = async (pageIndex: number, label: string) => {
+    if (!binder) return;
+    const newLabels: Record<string, string> = { ...(binder.pageLabels || {}) };
+
+    // Clean up empty labels
+    if (!label) {
+      delete newLabels[String(pageIndex)];
+    } else {
+      newLabels[String(pageIndex)] = label;
+    }
+
+    setBinder({ ...binder, pageLabels: newLabels });
+
+    try {
+      await api.put(`/binders/${binder.id}`, { name: binder.name, pageLabels: newLabels });
+    } catch (error) {
+      console.error('Failed to update page label');
+      // No toast needed for every keystroke usually, but maybe on blur? 
+      // For now, let's just do it.
+    }
+  };
+
+  const jumpToPage = (pageIndex: number) => {
+    // Calculate which VIEW this page is in
+    let viewIndex;
+    if (isMobile) {
+      viewIndex = pageIndex;
+    } else {
+      // Desktop: 
+      // Page 0 -> View 0
+      // Page 1 -> View 1
+      // Page 2 -> View 1
+      // Page 3 -> View 2
+      // Formula: View = ceil(pageIndex / 2) ? 
+      // Wait, let's recheck logic:
+      // index 0 (Right only) -> View 0
+      // index 1 (Left), 2 (Right) -> View 1
+      // index 3 (Left), 4 (Right) -> View 2
+      if (pageIndex === 0) viewIndex = 0;
+      else viewIndex = Math.ceil(pageIndex / 2);
+    }
+    setCurrentPage(Math.min(viewIndex, totalViews - 1));
+    setShowPageList(false);
   };
 
   const handleDeleteBinder = async () => {
@@ -986,6 +1033,37 @@ const BinderView: React.FC = () => {
             )}
           </div>
 
+
+          {/* Page List (Desktop) */}
+          <div className="hidden xl:flex flex-col w-full flex-1 overflow-hidden min-h-0 mt-4 border-t border-gray-800/50 pt-4">
+            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 px-1">Pages</h3>
+            <div className="overflow-y-auto custom-scrollbar pr-2 space-y-0.5">
+              {Array.from({ length: totalPages }).map((_, i) => {
+                const isCurrent = isMobile
+                  ? currentPage === i
+                  : (i === 0 && currentPage === 0) || (i > 0 && Math.ceil(i / 2) === currentPage);
+
+                return (
+                  <div
+                    key={i}
+                    className={`group flex items-center gap-2 px-2 py-1.5 rounded-lg transition-colors cursor-pointer ${isCurrent ? 'bg-purple-500/20 text-purple-300' : 'hover:bg-white/5 text-gray-400'}`}
+                    onClick={() => jumpToPage(i)}
+                  >
+                    <div className={`w-1.5 h-1.5 rounded-full ${isCurrent ? 'bg-purple-500' : 'bg-gray-700 group-hover:bg-gray-600'}`}></div>
+
+                    <input
+                      className="bg-transparent border-none text-sm w-full focus:ring-0 p-0 cursor-pointer focus:cursor-text placeholder-gray-600 text-inherit font-medium"
+                      value={binder.pageLabels?.[i] || ''}
+                      placeholder={`Page ${i + 1}`}
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={(e) => handlePageLabelChange(i, e.target.value)}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Landscape Navigation (Sidebar) */}
           <div className="hidden xl:flex w-full justify-center mt-auto pt-4 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-150">
             <div className="flex items-center gap-2 bg-gray-900/40 p-1 rounded-full border border-gray-700/50 shadow-inner">
@@ -1158,9 +1236,52 @@ const BinderView: React.FC = () => {
 
         {/* Portrait Navigation (Bottom) */}
         <div className="xl:hidden flex justify-center mt-3 mb-1 flex-shrink-0 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-150 z-20">
-          <div className="flex items-center gap-4 bg-gray-900/60 backdrop-blur-md p-1.5 rounded-full border border-gray-700/50 shadow-xl ring-1 ring-white/5">
+          <div className="flex items-center gap-2 bg-gray-900/60 backdrop-blur-md p-1.5 rounded-full border border-gray-700/50 shadow-xl ring-1 ring-white/5 relative">
             <Button onClick={() => setCurrentPage(Math.max(0, currentPage - 1))} disabled={currentPage === 0} variant="ghost" size="icon" className="w-10 h-10 rounded-full text-white hover:bg-white/10 active:scale-95 transition-all"><ChevronLeft className="w-6 h-6" /></Button>
-            <span className="text-sm font-medium text-gray-200 tabular-nums px-2 min-w-[5rem] text-center">Page {currentPage + 1} of {totalViews}</span>
+
+            <div className="relative">
+              <button
+                onClick={() => setShowPageList(!showPageList)}
+                className="text-sm font-medium text-gray-200 tabular-nums px-4 py-2 min-w-[5rem] text-center hover:bg-white/5 rounded-lg transition-colors flex flex-col items-center justify-center gap-0.5"
+              >
+                <span>Page {currentPage + 1}</span>
+                <span className="text-[10px] text-gray-500">of {totalViews}</span>
+              </button>
+
+              {/* Mobile Page List Dropdown */}
+              {showPageList && (
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-4 w-64 bg-gray-900/95 backdrop-blur-xl border border-gray-700/50 rounded-xl shadow-2xl overflow-hidden p-2 z-50 animate-in slide-in-from-bottom-2 fade-in duration-200">
+                  <div className="max-h-60 overflow-y-auto custom-scrollbar space-y-0.5">
+                    {Array.from({ length: totalPages }).map((_, i) => {
+                      const isCurrent = isMobile
+                        ? currentPage === i
+                        : (i === 0 && currentPage === 0) || (i > 0 && Math.ceil(i / 2) === currentPage);
+
+                      return (
+                        <div
+                          key={i}
+                          className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-colors cursor-pointer ${isCurrent ? 'bg-purple-500/20 text-purple-300' : 'hover:bg-white/5 text-gray-400'}`}
+                          onClick={() => jumpToPage(i)}
+                        >
+                          <span className="text-xs font-mono opacity-50 w-5">
+                            {i + 1}
+                          </span>
+                          <input
+                            className="bg-transparent border-none text-sm w-full focus:ring-0 p-0 cursor-pointer focus:cursor-text placeholder-gray-600 text-inherit font-medium"
+                            value={binder.pageLabels?.[i] || ''}
+                            placeholder={`Page ${i + 1}`}
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={(e) => handlePageLabelChange(i, e.target.value)}
+                          />
+                          {isCurrent && <div className="w-1.5 h-1.5 rounded-full bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.5)]"></div>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
             <Button onClick={() => setCurrentPage(Math.min(totalViews - 1, currentPage + 1))} disabled={currentPage >= totalViews - 1} variant="ghost" size="icon" className="w-10 h-10 rounded-full text-white hover:bg-white/10 active:scale-95 transition-all"><ChevronRight className="w-6 h-6" /></Button>
           </div>
         </div>

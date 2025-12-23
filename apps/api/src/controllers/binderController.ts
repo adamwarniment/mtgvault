@@ -260,7 +260,7 @@ export const updateBinderSettings = async (req: AuthRequest, res: Response) => {
 
 export const updateBinder = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
-    const { name } = req.body;
+    const { name, pageLabels } = req.body;
 
     try {
         const binder = await prisma.binder.findUnique({ where: { id } });
@@ -270,7 +270,7 @@ export const updateBinder = async (req: AuthRequest, res: Response) => {
 
         const updatedBinder = await prisma.binder.update({
             where: { id },
-            data: { name },
+            data: { name, pageLabels },
         });
 
         res.json(updatedBinder);

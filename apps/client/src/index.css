@@ -22,9 +22,11 @@
   --gradient-via: rgba(168, 85, 247, 0.05);
   --gradient-to: rgba(236, 72, 153, 0.1);
   
-  /* Animated orbs */
-  --orb-1: rgba(139, 92, 246, 0.05);
-  --orb-2: rgba(236, 72, 153, 0.05);
+  /* Animated orbs - Desaturated/Neutral for "almost grayscale" feel in dark mode */
+  --orb-1: rgba(255, 255, 255, 0.03);
+  --orb-2: rgba(255, 255, 255, 0.03);
+  
+  --texture-invert: 0;
 }
 
 /* Light theme */
@@ -45,11 +47,13 @@
   --input-border: theme('colors.gray.300');
   
   /* Gradient backgrounds */
-  --gradient-from: rgba(139, 92, 246, 0.05);
-  --gradient-via: rgba(168, 85, 247, 0.02);
-  --gradient-to: rgba(236, 72, 153, 0.05);
+  --gradient-from: rgba(0, 0, 0, 0.03);
+  --gradient-via: transparent;
+  --gradient-to: rgba(0, 0, 0, 0.03);
   
   /* Animated orbs */
-  --orb-1: rgba(139, 92, 246, 0.03);
-  --orb-2: rgba(236, 72, 153, 0.03);
+  --orb-1: rgba(0, 0, 0, 0.03);
+  --orb-2: rgba(0, 0, 0, 0.03);
+  
+  --texture-invert: 1;
 }

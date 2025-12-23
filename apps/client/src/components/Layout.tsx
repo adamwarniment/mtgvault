@@ -20,14 +20,15 @@ const Layout: React.FC<{ children: React.ReactNode; allowScroll?: boolean }> = (
     const isActive = (path: string) => location.pathname === path;
 
     return (
-        <div className="h-screen w-screen overflow-hidden flex flex-col md:flex-row fixed inset-0" style={{
-            background: `linear-gradient(to bottom right, var(--bg-primary), var(--gradient-via), var(--bg-primary))`
-        }}>
-            {/* Animated background */}
-            <div className="fixed inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-0 left-1/4 w-96 h-96 rounded-full blur-3xl animate-pulse" style={{ backgroundColor: 'var(--orb-1)' }}></div>
-                <div className="absolute bottom-0 right-1/4 w-96 h-96 rounded-full blur-3xl animate-pulse delay-1000" style={{ backgroundColor: 'var(--orb-2)' }}></div>
-            </div>
+        <div className="h-screen w-screen overflow-hidden flex flex-col md:flex-row fixed inset-0 bg-zinc-950 text-white">
+            {/* Subtle Texture Background */}
+            <div className="absolute inset-0 opacity-[0.05] pointer-events-none" style={{
+                backgroundImage: `url("https://www.transparenttextures.com/patterns/diagmonds-light.png")`,
+                backgroundSize: 'auto'
+            }}></div>
+
+            {/* Dark Gradient Overlay for depth without color */}
+            <div className="fixed inset-0 bg-gradient-to-br from-zinc-900/50 via-zinc-950/80 to-black pointer-events-none"></div>
 
             {/* Desktop Sidebar */}
             <aside
