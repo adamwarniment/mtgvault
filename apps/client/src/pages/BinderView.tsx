@@ -527,9 +527,30 @@ const BinderView: React.FC = () => {
   const handleBulkAddClick = () => {
     if (!binder) return;
 
-    // Find first empty slot
+    // Determine page size based on layout
+    const pageSize = binder.layout === 'GRID_2x2' ? 4 : binder.layout === 'GRID_4x3' ? 12 : 9;
+
+    // Calculate the starting page index based on current view
+    let startPageIndex = 0;
+    if (isMobile) {
+      startPageIndex = currentPage;
+    } else {
+      // Desktop View Logic:
+      // View 0 -> Page 0 (Right only)
+      // View 1 -> Page 1 (Left), Page 2 (Right)
+      // View N -> Page (2N-1) (Left) ...
+      if (currentPage === 0) {
+        startPageIndex = 0;
+      } else {
+        startPageIndex = (currentPage * 2) - 1;
+      }
+    }
+
+    // Determine the absolute slot index to start searching from
+    let firstEmptySlot = Math.max(0, startPageIndex) * pageSize;
+
+    // Find first empty slot starting from current page
     const occupiedIndices = new Set(binder.cards.map(c => c.positionIndex));
-    let firstEmptySlot = 0;
     while (occupiedIndices.has(firstEmptySlot)) {
       firstEmptySlot++;
     }

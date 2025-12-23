@@ -526,7 +526,7 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, onSelectCard
             </Card>
 
             {/* Floating Controls (Moved Outside) */}
-            <div className="mt-4 flex items-center gap-4 w-max max-w-[90vw] z-50">
+            <div className="mt-4 flex items-center gap-4 w-max max-w-[90vw] z-50" onClick={(e) => e.stopPropagation()}>
                 {/* Add Card Back Pill */}
                 <div className="rounded-full shadow-lg overflow-hidden animate-in slide-in-from-bottom-4 fade-in duration-300">
                     <Button
