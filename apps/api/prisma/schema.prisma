@@ -9,13 +9,14 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  themeMode String   @default("dark") // "dark" or "light"
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  binders   Binder[]
+  id            String         @id @default(uuid())
+  email         String         @unique
+  password      String
+  themeMode     String         @default("dark") // "dark" or "light"
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  binders       Binder[]
+  savedSearches SavedSearch[]
 }
 
 model Binder {
@@ -50,4 +51,14 @@ model Card {
   updatedAt       DateTime @updatedAt
 
   @@unique([binderId, positionIndex])
+}
+
+model SavedSearch {
+  id        String   @id @default(uuid())
+  name      String
+  query     String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

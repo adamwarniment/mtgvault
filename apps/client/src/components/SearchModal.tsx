@@ -44,32 +44,86 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, onSelectCard
     }, [showSavedSearches]);
 
     React.useEffect(() => {
-        const saved = localStorage.getItem('mtg-vault-saved-searches');
-        if (saved) {
+        const loadSavedSearches = async () => {
             try {
-                setSavedSearches(JSON.parse(saved));
-            } catch (e) {
-                console.error('Failed to parse saved searches', e);
+                // First, try to fetch from the API
+                const response = await api.get('/saved-searches');
+                const apiSearches = response.data;
+
+                // Check if we have any searches in localStorage that need to be migrated
+                const localStorageKey = 'mtg-vault-saved-searches';
+                const localSaved = localStorage.getItem(localStorageKey);
+
+                if (localSaved && apiSearches.length === 0) {
+                    // We have localStorage data but nothing in the API - migrate it
+                    try {
+                        const localSearches = JSON.parse(localSaved);
+                        if (Array.isArray(localSearches) && localSearches.length > 0) {
+                            // Bulk create the searches in the API
+                            await api.post('/saved-searches/bulk', { searches: localSearches });
+
+                            // Fetch again to get the searches with proper IDs
+                            const migratedResponse = await api.get('/saved-searches');
+                            setSavedSearches(migratedResponse.data);
+
+                            // Clear localStorage after successful migration
+                            localStorage.removeItem(localStorageKey);
+                            console.log('Successfully migrated saved searches from localStorage to server');
+                        } else {
+                            setSavedSearches(apiSearches);
+                        }
+                    } catch (e) {
+                        console.error('Failed to migrate saved searches', e);
+                        setSavedSearches(apiSearches);
+                    }
+                } else {
+                    // Just use the API data
+                    setSavedSearches(apiSearches);
+                }
+            } catch (error) {
+                console.error('Failed to load saved searches', error);
             }
-        }
+        };
+
+        loadSavedSearches();
     }, []);
 
-    const handleSaveSearch = (e: React.FormEvent) => {
+
+
+    const handleSaveSearch = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newSearchName.trim()) return;
-        const newSaved = [...savedSearches, { id: Date.now().toString(), name: newSearchName, query }];
-        setSavedSearches(newSaved);
-        localStorage.setItem('mtg-vault-saved-searches', JSON.stringify(newSaved));
-        setIsSaveModalOpen(false);
-        setNewSearchName('');
+
+        try {
+            const response = await api.post('/saved-searches', {
+                name: newSearchName,
+                query
+            });
+
+            setSavedSearches([...savedSearches, response.data]);
+            setIsSaveModalOpen(false);
+            setNewSearchName('');
+        } catch (error) {
+            console.error('Failed to save search', error);
+            // Optionally show an error message to the user
+        }
     };
 
-    const handleDeleteSearch = (id: string, e: React.MouseEvent) => {
+
+
+    const handleDeleteSearch = async (id: string, e: React.MouseEvent) => {
         e.stopPropagation();
-        const newSaved = savedSearches.filter(s => s.id !== id);
-        setSavedSearches(newSaved);
-        localStorage.setItem('mtg-vault-saved-searches', JSON.stringify(newSaved));
+
+        try {
+            await api.delete(`/saved-searches/${id}`);
+            const newSaved = savedSearches.filter(s => s.id !== id);
+            setSavedSearches(newSaved);
+        } catch (error) {
+            console.error('Failed to delete search', error);
+            // Optionally show an error message to the user
+        }
     };
+
 
     const loadSavedSearch = (savedQuery: string) => {
         setQuery(savedQuery);
