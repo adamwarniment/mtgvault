@@ -64,22 +64,23 @@ const Dashboard: React.FC = () => {
 
                 {/* Quick Action Card */}
                 <div className="mb-12">
-                    <Card className="border-purple-500/50 bg-gradient-to-br from-purple-500/10 to-pink-500/10 max-w-md">
+                    <Card className="border-blue-500/50 bg-gradient-to-br from-blue-500/10 to-indigo-500/10 max-w-md">
                         <CardContent className="pt-6">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-sm text-purple-300 mb-1">Quick Action</p>
+                                    <p className="text-sm text-blue-300 mb-1">Quick Action</p>
                                     <Button
                                         onClick={() => setShowModal(true)}
                                         size="sm"
+                                        variant="success"
                                         className="mt-2"
                                     >
                                         <Plus className="w-4 h-4 mr-2" />
                                         New Binder
                                     </Button>
                                 </div>
-                                <div className="w-12 h-12 rounded-xl bg-purple-500/30 flex items-center justify-center">
-                                    <Plus className="w-6 h-6 text-purple-300" />
+                                <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center">
+                                    <Plus className="w-6 h-6 text-blue-300" />
                                 </div>
                             </div>
                         </CardContent>
@@ -95,7 +96,7 @@ const Dashboard: React.FC = () => {
                             </div>
                             <h3 className="text-xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>No binders yet</h3>
                             <p className="mb-6" style={{ color: 'var(--text-secondary)' }}>Create your first binder to start organizing your collection</p>
-                            <Button onClick={() => setShowModal(true)}>
+                            <Button onClick={() => setShowModal(true)} variant="success">
                                 <Plus className="w-4 h-4 mr-2" />
                                 Create First Binder
                             </Button>
@@ -109,17 +110,17 @@ const Dashboard: React.FC = () => {
                                 to={`/binder/${binder.id}`}
                                 className="group"
                             >
-                                <Card className="h-full transition-all hover:border-purple-500/50 hover:shadow-xl hover:shadow-purple-500/10 hover:-translate-y-1">
+                                <Card className="h-full transition-all hover:border-blue-500/50 hover:shadow-xl hover:shadow-blue-500/10 hover:-translate-y-1">
                                     <CardHeader>
                                         <div className="flex items-start justify-between mb-3">
-                                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-600/20 to-pink-600/20 flex items-center justify-center group-hover:from-purple-600/30 group-hover:to-pink-600/30 transition-all">
-                                                <BookOpen className="w-6 h-6 text-purple-400" />
+                                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-600/20 to-indigo-600/20 flex items-center justify-center group-hover:from-blue-600/30 group-hover:to-indigo-600/30 transition-all">
+                                                <BookOpen className="w-6 h-6 text-blue-400" />
                                             </div>
                                             <span className="text-xs font-mono bg-gray-800 px-2 py-1 rounded-md text-gray-400">
                                                 {getLayoutDisplay(binder.layout)}
                                             </span>
                                         </div>
-                                        <CardTitle className="group-hover:text-purple-400 transition-colors">
+                                        <CardTitle className="group-hover:text-blue-400 transition-colors">
                                             {binder.name}
                                         </CardTitle>
                                         <CardDescription>
@@ -127,7 +128,7 @@ const Dashboard: React.FC = () => {
                                         </CardDescription>
                                     </CardHeader>
                                     <CardContent>
-                                        <div className="flex items-center text-sm text-purple-400 group-hover:text-purple-300 transition-colors">
+                                        <div className="flex items-center text-sm text-blue-400 group-hover:text-blue-300 transition-colors">
                                             Open binder
                                             <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
                                         </div>
@@ -165,7 +166,7 @@ const Dashboard: React.FC = () => {
                                         <select
                                             value={newBinderLayout}
                                             onChange={(e) => setNewBinderLayout(e.target.value)}
-                                            className="flex h-11 w-full rounded-lg border border-gray-700 bg-gray-800/50 px-4 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                                            className="flex h-11 w-full rounded-lg border border-gray-700 bg-gray-800/50 px-4 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                                             disabled={loading}
                                         >
                                             <option value="GRID_2x2">2 × 2 (4 cards per page)</option>
@@ -182,7 +183,7 @@ const Dashboard: React.FC = () => {
                                         >
                                             Cancel
                                         </Button>
-                                        <Button type="submit" disabled={loading}>
+                                        <Button type="submit" disabled={loading} variant="success">
                                             {loading ? 'Creating...' : 'Create Binder'}
                                         </Button>
                                     </div>

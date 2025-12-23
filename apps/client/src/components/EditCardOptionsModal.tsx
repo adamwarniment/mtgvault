@@ -57,21 +57,27 @@ const EditCardOptionsModal: React.FC<EditCardOptionsModalProps> = ({
             />
 
             {/* Modal */}
-            <div className="relative bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-2xl shadow-2xl border border-gray-700 max-w-md w-full animate-in fade-in zoom-in-95 duration-200">
+            <div className="relative rounded-2xl shadow-2xl border max-w-md w-full animate-in fade-in zoom-in-95 duration-200"
+                style={{
+                    backgroundColor: 'var(--bg-secondary)',
+                    borderColor: 'var(--border-primary)'
+                }}
+            >
                 {/* Header */}
-                <div className="flex items-center justify-between p-6 border-b border-gray-700">
+                <div className="flex items-center justify-between p-6 border-b" style={{ borderColor: 'var(--border-primary)' }}>
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
                             <BookOpen className="w-5 h-5 text-blue-500" />
                         </div>
                         <div>
-                            <h2 className="text-xl font-bold text-white">Edit Card</h2>
-                            <p className="text-xs text-gray-400">{cardName}</p>
+                            <h2 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Edit Card</h2>
+                            <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{cardName}</p>
                         </div>
                     </div>
                     <button
                         onClick={onClose}
-                        className="text-gray-400 hover:text-white transition-colors"
+                        className="transition-colors hover:text-blue-500"
+                        style={{ color: 'var(--text-secondary)' }}
                     >
                         <X className="w-5 h-5" />
                     </button>
@@ -105,8 +111,8 @@ const EditCardOptionsModal: React.FC<EditCardOptionsModalProps> = ({
                                     `} />
                                 </div>
                                 <div className="flex-1">
-                                    <h3 className="font-semibold text-white mb-1">{option.title}</h3>
-                                    <p className="text-sm text-gray-400">{option.description}</p>
+                                    <h3 className="font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>{option.title}</h3>
+                                    <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{option.description}</p>
                                 </div>
                             </div>
                         </button>
@@ -114,7 +120,7 @@ const EditCardOptionsModal: React.FC<EditCardOptionsModalProps> = ({
                 </div>
 
                 {/* Footer */}
-                <div className="flex gap-3 p-6 border-t border-gray-700">
+                <div className="flex gap-3 p-6 border-t" style={{ borderColor: 'var(--border-primary)' }}>
                     <Button
                         onClick={onClose}
                         variant="outline"

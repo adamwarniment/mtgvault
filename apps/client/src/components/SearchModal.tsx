@@ -47,7 +47,7 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, onSelectCard
             <div className="flex flex-col gap-2 group">
                 <div
                     onClick={() => onSelect(card)}
-                    className="relative w-full aspect-[63/88] rounded-lg cursor-pointer [perspective:1000px] hover:scale-105 transition-all shadow-md hover:shadow-xl hover:shadow-purple-500/20"
+                    className="relative w-full aspect-[63/88] rounded-lg cursor-pointer [perspective:1000px] hover:scale-105 transition-all shadow-md hover:shadow-xl hover:shadow-blue-500/20"
                     role="button"
                 >
                     {/* Flip Container */}
@@ -166,14 +166,14 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, onSelectCard
             onClick={onClose}
         >
             <Card
-                className="w-full max-w-5xl h-[85vh] flex flex-col shadow-2xl shadow-purple-500/20 animate-in"
+                className="w-full max-w-5xl h-[85vh] flex flex-col shadow-2xl shadow-blue-500/20 animate-in"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
                 <div className="p-3 border-b border-gray-800 flex justify-between items-center shrink-0 bg-gray-900/95 backdrop-blur z-20">
                     <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center">
-                            <Search className="w-4 h-4 text-purple-400" />
+                        <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                            <Search className="w-4 h-4 text-blue-400" />
                         </div>
                         <div>
                             <h2 className="text-lg font-bold text-white leading-none">Search Cards</h2>
@@ -228,7 +228,7 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, onSelectCard
                                             flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium
                                             transition-all duration-200 border
                                             ${uniqueArtsOnly
-                                                ? 'bg-purple-500/20 border-purple-500/50 text-purple-300 hover:bg-purple-500/30'
+                                                ? 'bg-blue-500/20 border-blue-500/50 text-blue-300 hover:bg-blue-500/30'
                                                 : 'bg-gray-800/50 border-gray-700 text-gray-400 hover:bg-gray-800 hover:text-gray-300'
                                             }
                                         `}
@@ -286,7 +286,7 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, onSelectCard
                                         step="10"
                                         value={zoomLevel}
                                         onChange={(e) => setZoomLevel(Number(e.target.value))}
-                                        className="flex-1 sm:w-32 sm:flex-none h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-purple-500 hover:accent-purple-400 transition-colors"
+                                        className="flex-1 sm:w-32 sm:flex-none h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500 hover:accent-blue-400 transition-colors"
                                     />
                                     <ZoomIn className="w-3.5 h-3.5 text-gray-500 flex-shrink-0" />
                                 </div>
@@ -300,7 +300,7 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, onSelectCard
                         <div>
                             {loading ? (
                                 <div className="flex flex-col items-center justify-center h-full text-gray-400">
-                                    <Loader2 className="w-12 h-12 animate-spin mb-4 text-purple-500" />
+                                    <Loader2 className="w-12 h-12 animate-spin mb-4 text-blue-500" />
                                     <p>Searching Scryfall...</p>
                                 </div>
                             ) : results.length === 0 ? (
@@ -316,7 +316,7 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, onSelectCard
                                             Found {results.length} {results.length === 1 ? 'card' : 'cards'}
                                         </p>
                                         {uniqueArtsOnly && (
-                                            <span className="text-xs text-purple-400 bg-purple-500/10 px-2 py-1 rounded-md">
+                                            <span className="text-xs text-blue-400 bg-blue-500/10 px-2 py-1 rounded-md">
                                                 Unique Arts Only
                                             </span>
                                         )}
@@ -339,7 +339,7 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, onSelectCard
                             {/* Loading More Indicator */}
                             {loadingMore && (
                                 <div className="w-full py-6 flex flex-col items-center justify-center text-gray-400 animate-in fade-in slide-in-from-bottom-4">
-                                    <Loader2 className="w-6 h-6 animate-spin mb-2 text-purple-500" />
+                                    <Loader2 className="w-6 h-6 animate-spin mb-2 text-blue-500" />
                                     <p className="text-sm font-medium">Loading more cards...</p>
                                 </div>
                             )}

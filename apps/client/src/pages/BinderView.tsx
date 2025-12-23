@@ -885,7 +885,7 @@ const BinderView: React.FC = () => {
       <div className="h-full flex flex-col xl:flex-row py-2 px-2 md:py-4 md:px-4 overflow-hidden max-h-full">
 
         {/* Header / Sidebar (Landscape) */}
-        <div className="mb-4 flex-shrink-0 xl:mb-0 xl:w-56 xl:h-full xl:flex xl:flex-col xl:justify-center xl:mr-4 xl:border-r xl:border-gray-800/50 xl:pr-4 xl:overflow-y-auto custom-scrollbar">
+        <div className="mb-4 flex-shrink-0 xl:mb-0 xl:w-56 xl:h-full xl:flex xl:flex-col xl:justify-center xl:mr-4 xl:border-r xl:pr-4 xl:overflow-y-auto custom-scrollbar" style={{ borderColor: 'var(--border-primary)' }}>
           <div className="flex justify-between items-start gap-2 mb-2 xl:flex-col xl:items-center xl:w-full xl:mb-6 xl:gap-4">
             {isEditMode ? (
               <Input
@@ -893,11 +893,16 @@ const BinderView: React.FC = () => {
                 onChange={handleNameChange}
                 onBlur={handleNameBlur}
                 onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-                className="text-2xl font-bold text-white mb-1 xl:text-center xl:mb-2 !bg-white/5 !border-white/10 hover:!border-purple-500/50 focus:!border-purple-500 focus:ring-2 focus:ring-purple-500/50 rounded-xl px-4 h-auto w-full text-center transition-all shadow-inner"
+                className="text-2xl font-bold mb-1 xl:text-center xl:mb-2 rounded-xl px-4 h-auto w-full text-center transition-all shadow-inner border"
+                style={{
+                  backgroundColor: 'var(--input-bg)',
+                  borderColor: 'var(--border-primary)',
+                  color: 'var(--text-primary)'
+                }}
                 placeholder="Binder Name"
               />
             ) : (
-              <h1 className="text-2xl font-bold text-white mb-1 xl:text-center xl:mb-2">{binder.name}</h1>
+              <h1 className="text-2xl font-bold mb-1 xl:text-center xl:mb-2" style={{ color: 'var(--text-primary)' }}>{binder.name}</h1>
             )}
 
             <div className="flex items-center gap-2 xl:justify-center xl:flex-wrap xl:gap-3">
@@ -906,7 +911,7 @@ const BinderView: React.FC = () => {
                 onClick={handleBulkAddClick}
                 variant="outline"
                 size="icon"
-                className="w-10 h-10 text-purple-400 bg-purple-500/10 border-purple-500/50 hover:bg-purple-500/20"
+                className="w-10 h-10 text-blue-400 bg-blue-500/10 border-blue-500/50 hover:bg-blue-500/20"
                 title="Bulk Add Cards"
               >
                 <LayoutGrid className="w-5 h-5" />
@@ -917,7 +922,7 @@ const BinderView: React.FC = () => {
                 onClick={() => handleToggleGrayOut(!binder.grayOutUnpurchased)}
                 variant="outline"
                 size="icon"
-                className={`w-10 h-10 transition-all ${binder.grayOutUnpurchased ? 'text-gray-400 bg-gray-800/50' : 'text-purple-400 bg-purple-500/10 border-purple-500/50'}`}
+                className={`w-10 h-10 transition-all ${binder.grayOutUnpurchased ? 'text-gray-400 bg-gray-800/50' : 'text-blue-400 bg-blue-500/10 border-blue-500/50'}`}
                 title={binder.grayOutUnpurchased ? "Show all in color" : "Gray out unpurchased"}
               >
                 {binder.grayOutUnpurchased ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
@@ -942,9 +947,9 @@ const BinderView: React.FC = () => {
                 title={isEditMode ? "Finish Editing" : "Edit Binder"}
               >
                 {isEditMode ? (
-                  <Save className="w-5 h-5" />
+                  <Save className="w-5 h-5 text-white" />
                 ) : (
-                  <Edit className="w-5 h-5" />
+                  <Edit className="w-5 h-5 text-current" />
                 )}
               </Button>
             </div>
@@ -954,12 +959,12 @@ const BinderView: React.FC = () => {
             {isEditMode ? (
               // EDIT MODE CONTROLS (Replaces Stats)
               <div className="flex items-center gap-4 w-full animate-in fade-in zoom-in-95 duration-200 xl:flex-col xl:items-center xl:text-center xl:gap-3">
-                <span className="text-sm font-medium text-gray-300">Drag Mode</span>
-                <div className="flex bg-gray-800 rounded-lg p-0.5 border border-gray-700/50">
+                <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Drag Mode</span>
+                <div className="flex rounded-lg p-0.5 border" style={{ backgroundColor: 'var(--bg-tertiary)', borderColor: 'var(--border-primary)' }}>
                   <button
                     onClick={() => setReplacementMode('SWAP')}
                     className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${replacementMode === 'SWAP'
-                      ? 'bg-purple-600 text-white shadow-lg'
+                      ? 'bg-blue-600 text-white shadow-lg'
                       : 'text-gray-400 hover:text-white'
                       }`}
                   >
@@ -968,7 +973,7 @@ const BinderView: React.FC = () => {
                   <button
                     onClick={() => setReplacementMode('INSERT')}
                     className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${replacementMode === 'INSERT'
-                      ? 'bg-purple-600 text-white shadow-lg'
+                      ? 'bg-blue-600 text-white shadow-lg'
                       : 'text-gray-400 hover:text-white'
                       }`}
                   >
@@ -982,10 +987,10 @@ const BinderView: React.FC = () => {
                 <div className="w-full h-px bg-gray-800 my-1" />
 
                 <Button
-                  variant="destructive"
+                  variant="ghost"
                   size="sm"
                   onClick={() => setShowDeleteBinderConfirm(true)}
-                  className="w-full gap-2 shadow-red-500/20"
+                  className="w-full gap-2 bg-red-500/10 border border-red-500/50 text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-colors"
                 >
                   <Trash2 className="w-4 h-4" />
                   Delete Binder
@@ -995,7 +1000,7 @@ const BinderView: React.FC = () => {
               // NORMAL STATS
               <div className="w-full flex items-center gap-4 animate-in fade-in zoom-in-95 duration-200 xl:flex-col xl:items-center xl:gap-3">
                 <div className="flex items-center gap-4 xl:flex-col xl:gap-1">
-                  <span className="flex items-center gap-2">
+                  <span className="flex items-center gap-2" style={{ color: 'var(--text-secondary)' }}>
                     <Layers className="w-4 h-4" />
                     {binder.cards.length} cards
                   </span>
@@ -1006,9 +1011,10 @@ const BinderView: React.FC = () => {
 
                 <div className="flex items-center gap-2 ml-auto md:ml-0 xl:w-full xl:flex-col xl:gap-3">
                   {/* Total Value Pill */}
-                  <div className="flex items-center gap-2 px-3 py-1 bg-gray-900/40 border border-gray-700/50 rounded-full shadow-inner xl:w-full xl:justify-center">
-                    <span className="text-xs text-gray-500 font-medium uppercase tracking-wider hidden sm:inline xl:inline">Total</span>
-                    <span className="text-white font-mono font-bold">
+                  <div className="flex items-center gap-2 px-3 py-1 rounded-full shadow-inner xl:w-full xl:justify-center border"
+                    style={{ backgroundColor: 'var(--bg-tertiary)', borderColor: 'var(--border-secondary)' }}>
+                    <span className="text-xs font-medium uppercase tracking-wider hidden sm:inline xl:inline" style={{ color: 'var(--text-tertiary)' }}>Total</span>
+                    <span className="font-mono font-bold" style={{ color: 'var(--text-primary)' }}>
                       ${totalValue.toFixed(2)}
                     </span>
                   </div>
@@ -1035,8 +1041,8 @@ const BinderView: React.FC = () => {
 
 
           {/* Page List (Desktop) */}
-          <div className="hidden xl:flex flex-col w-full flex-1 overflow-hidden min-h-0 mt-4 border-t border-gray-800/50 pt-4">
-            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 px-1">Pages</h3>
+          <div className="hidden xl:flex flex-col w-full flex-1 overflow-hidden min-h-0 mt-4 border-t pt-4" style={{ borderColor: 'var(--border-primary)' }}>
+            <h3 className="text-xs font-semibold uppercase tracking-wider mb-2 px-1" style={{ color: 'var(--text-tertiary)' }}>Pages</h3>
             <div className="overflow-y-auto custom-scrollbar pr-2 space-y-0.5">
               {Array.from({ length: totalPages }).map((_, i) => {
                 const isCurrent = isMobile
@@ -1046,13 +1052,20 @@ const BinderView: React.FC = () => {
                 return (
                   <div
                     key={i}
-                    className={`group flex items-center gap-2 px-2 py-1.5 rounded-lg transition-colors cursor-pointer ${isCurrent ? 'bg-purple-500/20 text-purple-300' : 'hover:bg-white/5 text-gray-400'}`}
+                    className={`group flex items-center gap-2 px-2 py-1.5 rounded-lg transition-colors cursor-pointer ${!isCurrent ? 'hover:bg-black/5 dark:hover:bg-white/5' : ''}`}
+                    style={{
+                      backgroundColor: isCurrent ? 'var(--bg-tertiary)' : 'transparent',
+                      color: isCurrent ? 'var(--text-primary)' : 'var(--text-tertiary)'
+                    }}
                     onClick={() => jumpToPage(i)}
                   >
-                    <div className={`w-1.5 h-1.5 rounded-full ${isCurrent ? 'bg-purple-500' : 'bg-gray-700 group-hover:bg-gray-600'}`}></div>
+                    <div
+                      className="w-1.5 h-1.5 rounded-full transition-colors"
+                      style={{ backgroundColor: isCurrent ? 'var(--text-primary)' : 'currentColor', opacity: isCurrent ? 1 : 0.5 }}
+                    ></div>
 
                     <input
-                      className="bg-transparent border-none text-sm w-full focus:ring-0 p-0 cursor-pointer focus:cursor-text placeholder-gray-600 text-inherit font-medium"
+                      className="bg-transparent border-none text-sm w-full focus:ring-0 p-0 cursor-pointer focus:cursor-text text-inherit font-medium placeholder-current opacity-100"
                       value={binder.pageLabels?.[i] || ''}
                       placeholder={`Page ${i + 1}`}
                       onClick={(e) => e.stopPropagation()}
@@ -1066,19 +1079,19 @@ const BinderView: React.FC = () => {
 
           {/* Landscape Navigation (Sidebar) */}
           <div className="hidden xl:flex w-full justify-center mt-auto pt-4 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-150">
-            <div className="flex items-center gap-2 bg-gray-900/40 p-1 rounded-full border border-gray-700/50 shadow-inner">
-              <Button onClick={() => setCurrentPage(Math.max(0, currentPage - 1))} disabled={currentPage === 0} variant="ghost" size="icon" className="w-8 h-8 rounded-full text-white hover:bg-white/10 hover:text-purple-400 transition-colors"><ChevronLeft className="w-4 h-4" /></Button>
+            <div className="flex items-center gap-2 p-1 rounded-full border shadow-inner" style={{ backgroundColor: 'var(--bg-tertiary)', borderColor: 'var(--border-secondary)' }}>
+              <Button onClick={() => setCurrentPage(Math.max(0, currentPage - 1))} disabled={currentPage === 0} variant="ghost" size="icon" className="w-8 h-8 rounded-full text-white hover:bg-white/10 hover:text-blue-400 transition-colors"><ChevronLeft className="w-4 h-4" /></Button>
               <span className="text-xs font-medium text-gray-400 tabular-nums px-2 min-w-[3rem] text-center">Page {currentPage + 1}/{totalViews}</span>
-              <Button onClick={() => setCurrentPage(Math.min(totalViews - 1, currentPage + 1))} disabled={currentPage >= totalViews - 1} variant="ghost" size="icon" className="w-8 h-8 rounded-full text-white hover:bg-white/10 hover:text-purple-400 transition-colors"><ChevronRight className="w-4 h-4" /></Button>
+              <Button onClick={() => setCurrentPage(Math.min(totalViews - 1, currentPage + 1))} disabled={currentPage >= totalViews - 1} variant="ghost" size="icon" className="w-8 h-8 rounded-full text-white hover:bg-white/10 hover:text-blue-400 transition-colors"><ChevronRight className="w-4 h-4" /></Button>
             </div>
           </div>
         </div>
 
         {/* Binder Spread Container */}
-        <div ref={containerRef} className="relative flex-1 flex items-center justify-center overflow-hidden">
+        <div ref={containerRef} className="relative flex-1 flex items-center justify-center p-6 md:p-8">
           {/* Binder Pages */}
           <div
-            className={`flex gap-0 justify-center items-center mx-auto transition-all duration-300 shadow-2xl rounded-2xl ${!containerSize.width ? 'opacity-0' : 'opacity-100'
+            className={`flex gap-0 justify-center items-center mx-auto transition-all duration-300 shadow-[0_5px_20px_0px_rgba(0,0,0,0.6)] rounded-2xl ${!containerSize.width ? 'opacity-0' : 'opacity-100'
               }`}
             style={getAspectStyle()}
           >
@@ -1092,7 +1105,8 @@ const BinderView: React.FC = () => {
                 {isMobile ? (
                   // Mobile Single Page View
                   <div
-                    className="relative bg-zinc-950 rounded-xl shadow-2xl p-4 border border-gray-700/50 w-full h-full flex flex-col justify-center"
+                    className="relative rounded-xl shadow-2xl p-4 border w-full h-full flex flex-col justify-center transition-colors duration-300"
+                    style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-primary)' }}
                   >
                     {/* Binder Texture Overlay */}
                     <div className="absolute inset-0 opacity-[0.03] bg-[url('https://www.transparenttextures.com/patterns/leather.png')] pointer-events-none rounded-xl"></div>
@@ -1136,11 +1150,12 @@ const BinderView: React.FC = () => {
                 ) : (
                   // Desktop Spread View
                   <>
-                    <div className="relative bg-zinc-950 rounded-l-xl rounded-r-none shadow-2xl pl-3 py-3 pr-0 border border-gray-700/50 border-r-0 w-full h-full flex flex-col justify-center">
+                    <div className="relative rounded-l-xl rounded-r-none pl-3 py-3 pr-0 border border-r-0 w-full h-full flex flex-col justify-center transition-colors duration-300"
+                      style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-primary)' }}>
                       <div className="absolute inset-0 opacity-[0.03] bg-[url('https://www.transparenttextures.com/patterns/leather.png')] pointer-events-none rounded-l-xl rounded-r-none"></div>
 
                       {/* Page Sheet */}
-                      <div className="w-full h-full mx-auto bg-[#111111]/90 rounded-sm shadow-[8px_8px_20px_rgba(0,0,0,0.6)] border border-white/5 relative z-10 overflow-hidden flex">
+                      <div className="w-full h-full mx-auto bg-[#111111]/90 rounded-sm shadow-[2px_0_10px_rgba(0,0,0,0.4)] border border-white/5 relative z-10 overflow-hidden flex">
                         {/* Spine Gradient Overlay */}
                         <div className="absolute right-0 top-0 bottom-0 w-5 bg-gradient-to-l from-black/60 to-transparent z-20 pointer-events-none"></div>
 
@@ -1176,11 +1191,14 @@ const BinderView: React.FC = () => {
                       </div>
                     </div>
 
-                    <div className="relative bg-zinc-950 rounded-r-xl rounded-l-none shadow-2xl pr-3 py-3 pl-0 border border-gray-700/50 border-l-0 w-full h-full flex flex-col justify-center">
+
+
+                    <div className="relative rounded-r-xl rounded-l-none pr-3 py-3 pl-0 border border-l-0 w-full h-full flex flex-col justify-center transition-colors duration-300"
+                      style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-primary)' }}>
                       <div className="absolute inset-0 opacity-[0.03] bg-[url('https://www.transparenttextures.com/patterns/leather.png')] pointer-events-none rounded-r-xl rounded-l-none"></div>
 
                       {/* Page Sheet */}
-                      <div className="w-full h-full mx-auto bg-[#111111]/90 rounded-sm shadow-[-8px_8px_20px_rgba(0,0,0,0.6)] border border-white/5 relative z-10 overflow-hidden flex">
+                      <div className="w-full h-full mx-auto bg-[#111111]/90 rounded-sm shadow-[-2px_0_10px_rgba(0,0,0,0.4)] border border-white/5 relative z-10 overflow-hidden flex">
                         {/* Spine Gradient Overlay */}
                         <div className="absolute left-0 top-0 bottom-0 w-5 bg-gradient-to-r from-black/60 to-transparent z-20 pointer-events-none"></div>
 
@@ -1220,7 +1238,7 @@ const BinderView: React.FC = () => {
               </SortableContext>
               <DragOverlay>
                 {activeId ? (
-                  <div className="aspect-[63/88] rounded-lg border-2 border-purple-500 overflow-hidden shadow-2xl shadow-purple-500/50 opacity-90"
+                  <div className="aspect-[63/88] rounded-lg border-2 border-blue-500 overflow-hidden shadow-2xl shadow-blue-500/50 opacity-90"
                     style={{ width: '150px' }}>
                     {(() => {
                       const index = parseInt(activeId.split('-')[1]);
@@ -1236,13 +1254,14 @@ const BinderView: React.FC = () => {
 
         {/* Portrait Navigation (Bottom) */}
         <div className="xl:hidden flex justify-center mt-3 mb-1 flex-shrink-0 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-150 z-20">
-          <div className="flex items-center gap-2 bg-gray-900/60 backdrop-blur-md p-1.5 rounded-full border border-gray-700/50 shadow-xl ring-1 ring-white/5 relative">
+          <div className="flex items-center gap-2 backdrop-blur-md p-1.5 rounded-full border shadow-xl ring-1 ring-white/5 relative" style={{ backgroundColor: 'var(--bg-tertiary)', borderColor: 'var(--border-primary)' }}>
             <Button onClick={() => setCurrentPage(Math.max(0, currentPage - 1))} disabled={currentPage === 0} variant="ghost" size="icon" className="w-10 h-10 rounded-full text-white hover:bg-white/10 active:scale-95 transition-all"><ChevronLeft className="w-6 h-6" /></Button>
 
             <div className="relative">
               <button
                 onClick={() => setShowPageList(!showPageList)}
-                className="text-sm font-medium text-gray-200 tabular-nums px-4 py-2 min-w-[5rem] text-center hover:bg-white/5 rounded-lg transition-colors flex flex-col items-center justify-center gap-0.5"
+                className="text-sm font-medium tabular-nums px-4 py-2 min-w-[5rem] text-center hover:bg-white/5 rounded-lg transition-colors flex flex-col items-center justify-center gap-0.5"
+                style={{ color: 'var(--text-primary)' }}
               >
                 <span>Page {currentPage + 1}</span>
                 <span className="text-[10px] text-gray-500">of {totalViews}</span>
@@ -1260,20 +1279,29 @@ const BinderView: React.FC = () => {
                       return (
                         <div
                           key={i}
-                          className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-colors cursor-pointer ${isCurrent ? 'bg-purple-500/20 text-purple-300' : 'hover:bg-white/5 text-gray-400'}`}
+                          className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-colors cursor-pointer ${!isCurrent ? 'hover:bg-black/5 dark:hover:bg-white/5' : ''}`}
+                          style={{
+                            backgroundColor: isCurrent ? 'var(--bg-tertiary)' : 'transparent',
+                            color: isCurrent ? 'var(--text-primary)' : 'var(--text-tertiary)'
+                          }}
                           onClick={() => jumpToPage(i)}
                         >
                           <span className="text-xs font-mono opacity-50 w-5">
                             {i + 1}
                           </span>
                           <input
-                            className="bg-transparent border-none text-sm w-full focus:ring-0 p-0 cursor-pointer focus:cursor-text placeholder-gray-600 text-inherit font-medium"
+                            className="bg-transparent border-none text-sm w-full focus:ring-0 p-0 cursor-pointer focus:cursor-text text-inherit font-medium placeholder-current"
                             value={binder.pageLabels?.[i] || ''}
                             placeholder={`Page ${i + 1}`}
                             onClick={(e) => e.stopPropagation()}
                             onChange={(e) => handlePageLabelChange(i, e.target.value)}
                           />
-                          {isCurrent && <div className="w-1.5 h-1.5 rounded-full bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.5)]"></div>}
+                          {isCurrent && (
+                            <div
+                              className="w-1.5 h-1.5 rounded-full"
+                              style={{ backgroundColor: 'var(--text-primary)', boxShadow: '0 0 8px var(--text-primary)' }}
+                            ></div>
+                          )}
                         </div>
                       );
                     })}
@@ -1326,7 +1354,7 @@ const BinderView: React.FC = () => {
           onTogglePurchased={(isPurchased) => selectedCard && handleTogglePurchased(selectedCard.id, isPurchased)}
         />
       </div>
-    </Layout>
+    </Layout >
   );
 };
 

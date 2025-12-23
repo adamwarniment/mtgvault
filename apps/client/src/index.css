@@ -2,30 +2,34 @@
 
 /* Dark theme (default) */
 :root[data-theme="dark"] {
-  --bg-primary: theme('colors.gray.950');
-  --bg-secondary: theme('colors.gray.900');
-  --bg-tertiary: theme('colors.gray.800');
-  --bg-overlay: rgba(0, 0, 0, 0.6);
-  
-  --text-primary: theme('colors.white');
-  --text-secondary: theme('colors.gray.400');
-  --text-tertiary: theme('colors.gray.500');
-  
-  --border-primary: rgba(255, 255, 255, 0.1);
-  --border-secondary: rgba(255, 255, 255, 0.05);
-  
-  --input-bg: rgba(255, 255, 255, 0.05);
-  --input-border: theme('colors.gray.700');
-  
-  /* Gradient backgrounds */
-  --gradient-from: rgba(139, 92, 246, 0.1);
-  --gradient-via: rgba(168, 85, 247, 0.05);
-  --gradient-to: rgba(236, 72, 153, 0.1);
-  
+  /* Using Zinc palette for neutral dark grays */
+  --bg-primary: #09090b;
+  --bg-secondary: #0a0a0a;
+  --bg-tertiary: #18181b;
+  --bg-overlay: rgba(0, 0, 0, 0.7);
+
+  --text-primary: #ffffff;
+  --text-secondary: #a1a1aa;
+  /* Zinc 400 */
+  --text-tertiary: #71717a;
+  /* Zinc 500 */
+
+  --border-primary: rgba(255, 255, 255, 0.08);
+  --border-secondary: rgba(255, 255, 255, 0.04);
+
+  --input-bg: rgba(255, 255, 255, 0.03);
+  --input-border: #27272a;
+  /* Zinc 800 */
+
+  /* Gradient backgrounds - Neutral / Spotlight (No Blue) */
+  --gradient-from: rgba(255, 255, 255, 0.03);
+  --gradient-via: transparent;
+  --gradient-to: rgba(255, 255, 255, 0.01);
+
   /* Animated orbs - Desaturated/Neutral for "almost grayscale" feel in dark mode */
   --orb-1: rgba(255, 255, 255, 0.03);
   --orb-2: rgba(255, 255, 255, 0.03);
-  
+
   --texture-invert: 0;
 }
 
@@ -33,27 +37,27 @@
 :root[data-theme="light"] {
   --bg-primary: theme('colors.gray.50');
   --bg-secondary: theme('colors.white');
-  --bg-tertiary: theme('colors.gray.100');
+  --bg-tertiary: theme('colors.gray.200');
   --bg-overlay: rgba(255, 255, 255, 0.95);
-  
+
   --text-primary: theme('colors.gray.900');
   --text-secondary: theme('colors.gray.600');
   --text-tertiary: theme('colors.gray.500');
-  
+
   --border-primary: rgba(0, 0, 0, 0.1);
   --border-secondary: rgba(0, 0, 0, 0.05);
-  
+
   --input-bg: theme('colors.white');
   --input-border: theme('colors.gray.300');
-  
+
   /* Gradient backgrounds */
   --gradient-from: rgba(0, 0, 0, 0.03);
   --gradient-via: transparent;
   --gradient-to: rgba(0, 0, 0, 0.03);
-  
+
   /* Animated orbs */
   --orb-1: rgba(0, 0, 0, 0.03);
   --orb-2: rgba(0, 0, 0, 0.03);
-  
+
   --texture-invert: 1;
 }

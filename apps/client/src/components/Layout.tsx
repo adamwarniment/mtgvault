@@ -20,15 +20,25 @@ const Layout: React.FC<{ children: React.ReactNode; allowScroll?: boolean }> = (
     const isActive = (path: string) => location.pathname === path;
 
     return (
-        <div className="h-screen w-screen overflow-hidden flex flex-col md:flex-row fixed inset-0 bg-zinc-950 text-white">
+        <div className="h-screen w-screen overflow-hidden flex flex-col md:flex-row fixed inset-0 transition-colors duration-300"
+            style={{
+                backgroundColor: 'var(--bg-primary)',
+                color: 'var(--text-primary)'
+            }}
+        >
             {/* Subtle Texture Background */}
             <div className="absolute inset-0 opacity-[0.05] pointer-events-none" style={{
                 backgroundImage: `url("https://www.transparenttextures.com/patterns/diagmonds-light.png")`,
-                backgroundSize: 'auto'
+                backgroundSize: 'auto',
+                filter: 'invert(var(--texture-invert))'
             }}></div>
 
-            {/* Dark Gradient Overlay for depth without color */}
-            <div className="fixed inset-0 bg-gradient-to-br from-zinc-900/50 via-zinc-950/80 to-black pointer-events-none"></div>
+            {/* Gradient Overlay using theme variables */}
+            <div className="fixed inset-0 pointer-events-none transition-colors duration-300"
+                style={{
+                    background: `linear-gradient(to bottom right, var(--gradient-from), var(--gradient-via), var(--gradient-to))`
+                }}
+            ></div>
 
             {/* Desktop Sidebar */}
             <aside
@@ -42,12 +52,12 @@ const Layout: React.FC<{ children: React.ReactNode; allowScroll?: boolean }> = (
                 {/* Logo Section */}
                 <div className="p-4 border-b flex-shrink-0" style={{ borderColor: 'var(--border-primary)' }}>
                     <Link to="/" className="flex items-center gap-3 group">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center shadow-lg shadow-purple-500/30 group-hover:shadow-purple-500/50 transition-all flex-shrink-0">
+                        <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/30 group-hover:shadow-blue-500/50 transition-all flex-shrink-0">
                             <Book className="w-5 h-5 text-white" />
                         </div>
                         {sidebarExpanded && (
                             <div className="overflow-hidden">
-                                <h1 className="text-lg font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent whitespace-nowrap">
+                                <h1 className="text-lg font-bold text-white whitespace-nowrap">
                                     MTG Vault
                                 </h1>
                                 <p className="text-xs flex items-center gap-1 whitespace-nowrap" style={{ color: 'var(--text-tertiary)' }}>
@@ -64,7 +74,7 @@ const Layout: React.FC<{ children: React.ReactNode; allowScroll?: boolean }> = (
                     <Link
                         to="/"
                         className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${isActive('/')
-                            ? 'bg-purple-600/20 text-purple-400'
+                            ? 'bg-blue-600/10 text-blue-400'
                             : 'hover:text-white transition-colors'
                             }`}
                         style={{ color: isActive('/') ? undefined : 'var(--text-secondary)' }}
@@ -137,11 +147,11 @@ const Layout: React.FC<{ children: React.ReactNode; allowScroll?: boolean }> = (
                 }}
             >
                 <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center shadow-lg shadow-purple-500/30">
+                    <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
                         <Book className="w-4 h-4 text-white" />
                     </div>
                     <div>
-                        <h1 className="text-base font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+                        <h1 className="text-base font-bold text-white">
                             MTG Vault
                         </h1>
                     </div>
@@ -165,7 +175,7 @@ const Layout: React.FC<{ children: React.ReactNode; allowScroll?: boolean }> = (
                     <Link
                         to="/"
                         className={`p-2 rounded-lg transition-all ${isActive('/')
-                            ? 'text-purple-400 bg-purple-500/20'
+                            ? 'text-blue-400 bg-blue-500/10'
                             : ''
                             }`}
                         style={{ color: isActive('/') ? undefined : 'var(--text-secondary)' }}
@@ -205,7 +215,7 @@ const Layout: React.FC<{ children: React.ReactNode; allowScroll?: boolean }> = (
                                     <button
                                         onClick={() => toggleTheme()}
                                         className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border transition-all ${themeMode === 'dark'
-                                            ? 'bg-purple-600/20 border-purple-500/50 text-purple-400'
+                                            ? 'bg-blue-600/10 border-blue-500/50 text-blue-400'
                                             : 'border-gray-700 hover:border-gray-600'
                                             }`}
                                         style={{
@@ -219,7 +229,7 @@ const Layout: React.FC<{ children: React.ReactNode; allowScroll?: boolean }> = (
                                     <button
                                         onClick={() => toggleTheme()}
                                         className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border transition-all ${themeMode === 'light'
-                                            ? 'bg-purple-600/20 border-purple-500/50 text-purple-400'
+                                            ? 'bg-blue-600/10 border-blue-500/50 text-blue-400'
                                             : 'border-gray-700 hover:border-gray-600'
                                             }`}
                                         style={{
