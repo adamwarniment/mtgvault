@@ -25,6 +25,7 @@ import DeleteCardModal from '../components/DeleteCardModal';
 import EditCardOptionsModal from '../components/EditCardOptionsModal';
 import CardDetailsModal from '../components/CardDetailsModal';
 import ConfirmDialog from '../components/ConfirmDialog';
+import EditPageModal from '../components/EditPageModal';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { useToast } from '../components/ui/Toast';
@@ -52,7 +53,10 @@ interface Binder {
   grayOutUnpurchased: boolean;
   cards: CardType[];
   pageLabels?: Record<string, string>;
+  pageIcons?: Record<string, string>;
 }
+
+
 
 // --- Sortable Card Component ---
 const SortableCard = ({
@@ -259,6 +263,8 @@ const BinderView: React.FC = () => {
   const navigate = useNavigate();
   const [showDeleteBinderConfirm, setShowDeleteBinderConfirm] = useState(false);
   const [showPageList, setShowPageList] = useState(false); // Mobile page list toggle
+
+  const [editPageTarget, setEditPageTarget] = useState<{ pageIndex: number; initialName: string; initialIcon: string } | null>(null);
 
   // State for mobile/single-view detection (increased breakpoint for better portrait tablet support)
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
@@ -706,25 +712,36 @@ const BinderView: React.FC = () => {
     }
   };
 
-  const handlePageLabelChange = async (pageIndex: number, label: string) => {
-    if (!binder) return;
+
+
+
+
+  const handleSavePageDetails = async (name: string, icon: string) => {
+    if (!binder || !editPageTarget) return;
+    const { pageIndex } = editPageTarget;
+
     const newLabels: Record<string, string> = { ...(binder.pageLabels || {}) };
+    if (!name) delete newLabels[String(pageIndex)];
+    else newLabels[String(pageIndex)] = name;
 
-    // Clean up empty labels
-    if (!label) {
-      delete newLabels[String(pageIndex)];
-    } else {
-      newLabels[String(pageIndex)] = label;
-    }
+    const newIcons: Record<string, string> = { ...(binder.pageIcons || {}) };
+    newIcons[String(pageIndex)] = icon;
 
-    setBinder({ ...binder, pageLabels: newLabels });
+    // Optimistic Update
+    setBinder({ ...binder, pageLabels: newLabels, pageIcons: newIcons });
+    setEditPageTarget(null);
 
+    // Persist
     try {
-      await api.put(`/binders/${binder.id}`, { name: binder.name, pageLabels: newLabels });
+      await api.put(`/binders/${binder.id}`, {
+        name: binder.name,
+        pageLabels: newLabels,
+        pageIcons: newIcons
+      });
     } catch (error) {
-      console.error('Failed to update page label');
-      // No toast needed for every keystroke usually, but maybe on blur? 
-      // For now, let's just do it.
+      console.error('Failed to save page details');
+      // Revert or show error
+      toast('Failed to save page details', 'error');
     }
   };
 
@@ -814,12 +831,15 @@ const BinderView: React.FC = () => {
   let leftPageSlots: typeof slots = [];
   let rightPageSlots: typeof slots = [];
 
+  let leftPageIndex = -1;
+  let rightPageIndex = -1;
+
   if (isMobile) {
     const start = currentPage * pageSize;
     currentViewSlots = slots.slice(start, start + pageSize);
   } else {
-    const leftPageIndex = (2 * currentPage) - 1;
-    const rightPageIndex = 2 * currentPage;
+    leftPageIndex = (2 * currentPage) - 1;
+    rightPageIndex = 2 * currentPage;
 
     if (currentPage > 0) {
       const leftStart = leftPageIndex * pageSize;
@@ -1040,37 +1060,58 @@ const BinderView: React.FC = () => {
           </div>
 
 
-          {/* Page List (Desktop) */}
           <div className="hidden xl:flex flex-col w-full flex-1 overflow-hidden min-h-0 mt-4 border-t pt-4" style={{ borderColor: 'var(--border-primary)' }}>
             <h3 className="text-xs font-semibold uppercase tracking-wider mb-2 px-1" style={{ color: 'var(--text-tertiary)' }}>Pages</h3>
-            <div className="overflow-y-auto custom-scrollbar pr-2 space-y-0.5">
+            <div className="overflow-y-auto custom-scrollbar pr-2 space-y-0.5 pb-20">
               {Array.from({ length: totalPages }).map((_, i) => {
                 const isCurrent = isMobile
                   ? currentPage === i
                   : (i === 0 && currentPage === 0) || (i > 0 && Math.ceil(i / 2) === currentPage);
 
+                const currentIcon = binder.pageIcons?.[String(i)];
+
                 return (
                   <div
                     key={i}
-                    className={`group flex items-center gap-2 px-2 py-1.5 rounded-lg transition-colors cursor-pointer ${!isCurrent ? 'hover:bg-black/5 dark:hover:bg-white/5' : ''}`}
+                    className={`group flex items-center gap-3 px-3 py-2 rounded-lg transition-colors cursor-pointer relative ${!isCurrent ? 'hover:bg-black/5 dark:hover:bg-white/5' : ''}`}
                     style={{
                       backgroundColor: isCurrent ? 'var(--bg-tertiary)' : 'transparent',
                       color: isCurrent ? 'var(--text-primary)' : 'var(--text-tertiary)'
                     }}
                     onClick={() => jumpToPage(i)}
                   >
-                    <div
-                      className="w-1.5 h-1.5 rounded-full transition-colors"
-                      style={{ backgroundColor: isCurrent ? 'var(--text-primary)' : 'currentColor', opacity: isCurrent ? 1 : 0.5 }}
-                    ></div>
+                    {/* Icon */}
+                    <div className="flex items-center justify-center w-6 h-6 rounded bg-white/5 border border-white/10 text-gray-400 group-hover:text-white transition-colors">
+                      <i className={`ms ms-${currentIcon || 'planeswalker'} ms-cost text-base`}></i>
+                    </div>
 
-                    <input
-                      className="bg-transparent border-none text-sm w-full focus:ring-0 p-0 cursor-pointer focus:cursor-text text-inherit font-medium placeholder-current opacity-100"
-                      value={binder.pageLabels?.[i] || ''}
-                      placeholder={`Page ${i + 1}`}
-                      onClick={(e) => e.stopPropagation()}
-                      onChange={(e) => handlePageLabelChange(i, e.target.value)}
-                    />
+                    {/* Label Area */}
+                    <div className="flex-1 min-w-0 flex items-center justify-between group/label">
+                      <span className={`truncate text-sm font-medium ${!binder.pageLabels?.[i] ? 'opacity-50 italic' : ''}`}>
+                        {binder.pageLabels?.[i] || `Page ${i + 1}`}
+                      </span>
+
+                      <button
+                        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-white/10 rounded text-gray-400 hover:text-white transition-all ml-1"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditPageTarget({
+                            pageIndex: i,
+                            initialName: binder.pageLabels?.[i] || '',
+                            initialIcon: binder.pageIcons?.[String(i)] || 'planeswalker'
+                          });
+                        }}
+                        title="Edit Page"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    {isCurrent && (
+                      <div
+                        className="w-1.5 h-1.5 rounded-full flex-shrink-0 ml-1 bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]"
+                      ></div>
+                    )}
                   </div>
                 );
               })}
@@ -1101,6 +1142,16 @@ const BinderView: React.FC = () => {
               onDragStart={(event) => setActiveId(event.active.id as string)}
               onDragEnd={handleDragEnd}
             >
+              {/* Closed Sidebar Page Title Footer (Mobile/Tablet/Collapsed Desktop) */}
+              <div className="absolute -bottom-10 left-0 right-0 flex justify-center items-center pointer-events-none xl:hidden transition-opacity duration-300">
+                <div className="bg-black/60 backdrop-blur-md px-4 py-1.5 rounded-full flex items-center gap-2 border border-white/5 shadow-xl">
+                  <i className={`ms ms-${binder.pageIcons?.[String(currentPage)] || 'planeswalker'} text-white text-lg`}></i>
+                  <span className="text-white font-medium text-sm tracking-wide">
+                    {binder.pageLabels?.[String(currentPage)] || `Page ${currentPage + 1}`}
+                  </span>
+                </div>
+              </div>
+
               <SortableContext items={slots.map((s) => s.id)} strategy={rectSortingStrategy}>
                 {isMobile ? (
                   // Mobile Single Page View
@@ -1189,6 +1240,26 @@ const BinderView: React.FC = () => {
                         <div className="w-5 h-full border-l border-white/10 border-dashed bg-white/5 flex flex-col justify-center items-center">
                         </div>
                       </div>
+
+                      {/* Left Page Footer Label */}
+                      {/* Left Page Footer Label */}
+                      {leftPageIndex >= 0 && (
+                        <div className="absolute -bottom-10 left-0 right-0 flex justify-center pointer-events-none z-20">
+                          <div
+                            className="backdrop-blur-md border px-3 py-1.5 rounded-full flex items-center gap-2 shadow-xl"
+                            style={{
+                              backgroundColor: 'var(--bg-tertiary)',
+                              borderColor: 'var(--border-secondary)',
+                              color: 'var(--text-primary)'
+                            }}
+                          >
+                            <i className={`ms ms-${binder.pageIcons?.[String(leftPageIndex)] || 'planeswalker'} text-sm`} style={{ color: 'var(--text-primary)' }}></i>
+                            <span className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--text-primary)' }}>
+                              {binder.pageLabels?.[String(leftPageIndex)] || `Page ${leftPageIndex + 1}`}
+                            </span>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
 
@@ -1232,6 +1303,26 @@ const BinderView: React.FC = () => {
                           ))}
                         </div>
                       </div>
+
+                      {/* Right Page Footer Label */}
+                      {/* Right Page Footer Label */}
+                      {(rightPageIndex < totalPages) && (
+                        <div className="absolute -bottom-10 left-0 right-0 flex justify-center pointer-events-none z-20">
+                          <div
+                            className="backdrop-blur-md border px-3 py-1.5 rounded-full flex items-center gap-2 shadow-xl"
+                            style={{
+                              backgroundColor: 'var(--bg-tertiary)',
+                              borderColor: 'var(--border-secondary)',
+                              color: 'var(--text-primary)'
+                            }}
+                          >
+                            <i className={`ms ms-${binder.pageIcons?.[String(rightPageIndex)] || 'planeswalker'} text-sm`} style={{ color: 'var(--text-primary)' }}></i>
+                            <span className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--text-primary)' }}>
+                              {binder.pageLabels?.[String(rightPageIndex)] || `Page ${rightPageIndex + 1}`}
+                            </span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </>
                 )}
@@ -1263,13 +1354,25 @@ const BinderView: React.FC = () => {
                 className="text-sm font-medium tabular-nums px-4 py-2 min-w-[5rem] text-center hover:bg-white/5 rounded-lg transition-colors flex flex-col items-center justify-center gap-0.5"
                 style={{ color: 'var(--text-primary)' }}
               >
-                <span>Page {currentPage + 1}</span>
-                <span className="text-[10px] text-gray-500">of {totalViews}</span>
+                <div className="flex items-center gap-2">
+                  <i className={`ms ms-${binder.pageIcons?.[String(currentPage)] || 'planeswalker'} text-sm opacity-80`}></i>
+                  <span>
+                    {binder.pageLabels?.[String(currentPage)] || `Page ${currentPage + 1}`}
+                  </span>
+                </div>
+                <span className="text-[10px] text-gray-500">Page {currentPage + 1} of {totalViews}</span>
               </button>
 
               {/* Mobile Page List Dropdown */}
+              {/* Mobile Page List Dropdown */}
               {showPageList && (
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-4 w-64 bg-gray-900/95 backdrop-blur-xl border border-gray-700/50 rounded-xl shadow-2xl overflow-hidden p-2 z-50 animate-in slide-in-from-bottom-2 fade-in duration-200">
+                <div
+                  className="absolute bottom-full left-1/2 -translate-x-1/2 mb-4 w-64 backdrop-blur-xl border rounded-xl shadow-2xl overflow-hidden p-2 z-50 animate-in slide-in-from-bottom-2 fade-in duration-200"
+                  style={{
+                    backgroundColor: 'var(--bg-secondary)',
+                    borderColor: 'var(--border-primary)'
+                  }}
+                >
                   <div className="max-h-60 overflow-y-auto custom-scrollbar space-y-0.5">
                     {Array.from({ length: totalPages }).map((_, i) => {
                       const isCurrent = isMobile
@@ -1279,29 +1382,41 @@ const BinderView: React.FC = () => {
                       return (
                         <div
                           key={i}
-                          className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-colors cursor-pointer ${!isCurrent ? 'hover:bg-black/5 dark:hover:bg-white/5' : ''}`}
+                          className={`group flex items-center justify-between px-3 py-2 rounded-lg transition-colors cursor-pointer ${!isCurrent ? 'hover:bg-black/5 dark:hover:bg-white/5' : ''}`}
                           style={{
                             backgroundColor: isCurrent ? 'var(--bg-tertiary)' : 'transparent',
                             color: isCurrent ? 'var(--text-primary)' : 'var(--text-tertiary)'
                           }}
-                          onClick={() => jumpToPage(i)}
+                          onClick={() => {
+                            jumpToPage(i);
+                            setShowPageList(false);
+                          }}
                         >
-                          <span className="text-xs font-mono opacity-50 w-5">
-                            {i + 1}
-                          </span>
-                          <input
-                            className="bg-transparent border-none text-sm w-full focus:ring-0 p-0 cursor-pointer focus:cursor-text text-inherit font-medium placeholder-current"
-                            value={binder.pageLabels?.[i] || ''}
-                            placeholder={`Page ${i + 1}`}
-                            onClick={(e) => e.stopPropagation()}
-                            onChange={(e) => handlePageLabelChange(i, e.target.value)}
-                          />
-                          {isCurrent && (
-                            <div
-                              className="w-1.5 h-1.5 rounded-full"
-                              style={{ backgroundColor: 'var(--text-primary)', boxShadow: '0 0 8px var(--text-primary)' }}
-                            ></div>
-                          )}
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                            <span className="text-xs font-mono opacity-50 w-5 flex-shrink-0">
+                              {i + 1}
+                            </span>
+                            <i className={`ms ms-${binder.pageIcons?.[String(i)] || 'planeswalker'} text-sm opacity-70`}></i>
+                            <span className={`text-sm font-medium truncate ${!binder.pageLabels?.[i] ? 'opacity-50 italic' : ''}`}>
+                              {binder.pageLabels?.[i] || `Page ${i + 1}`}
+                            </span>
+                          </div>
+
+                          <button
+                            className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-white/10 rounded transition-all"
+                            style={{ color: 'var(--text-secondary)' }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditPageTarget({
+                                pageIndex: i,
+                                initialName: binder.pageLabels?.[i] || '',
+                                initialIcon: binder.pageIcons?.[String(i)] || 'planeswalker'
+                              });
+                              setShowPageList(false);
+                            }}
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                       );
                     })}
@@ -1352,6 +1467,14 @@ const BinderView: React.FC = () => {
           onClose={() => setSelectedCard(null)}
           onRefresh={handleRefreshPrice}
           onTogglePurchased={(isPurchased) => selectedCard && handleTogglePurchased(selectedCard.id, isPurchased)}
+        />
+
+        <EditPageModal
+          isOpen={!!editPageTarget}
+          onClose={() => setEditPageTarget(null)}
+          onSave={handleSavePageDetails}
+          initialName={editPageTarget?.initialName || ''}
+          initialIcon={editPageTarget?.initialIcon || 'planeswalker'}
         />
       </div>
     </Layout >

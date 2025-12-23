@@ -29,6 +29,7 @@ model Binder {
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
   pageLabels         Json?
+  pageIcons          Json?
 }
 
 model Card {
