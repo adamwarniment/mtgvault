@@ -1,9 +1,11 @@
 import React from 'react';
-import { Search, X, Loader2, RotateCw, ZoomIn, ZoomOut, Save, Trash2, Book, ExternalLink } from 'lucide-react';
+import { Search, X, Loader2, RotateCw, ZoomIn, ZoomOut, Save, Trash2, Book, ExternalLink, Layers } from 'lucide-react';
 import api from '../api';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Card } from './ui/Card';
+import { groupCards, type GroupingOption, SortGroupsKeys } from '../lib/cardGrouping';
+import { CollapsibleSection } from './ui/CollapsibleSection';
 
 interface SearchModalProps {
     isOpen: boolean;
@@ -25,6 +27,7 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, onSelectCard
     const [newSearchName, setNewSearchName] = React.useState('');
     const [showSavedSearches, setShowSavedSearches] = React.useState(false);
     const [showSyntaxGuide, setShowSyntaxGuide] = React.useState(false);
+    const [groupBy, setGroupBy] = React.useState<GroupingOption>('none');
     const searchContainerRef = React.useRef<HTMLDivElement>(null);
 
     React.useEffect(() => {
@@ -235,10 +238,29 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, onSelectCard
             // Build search query with optional unique arts filter
             // Build search query
             const searchQuery = query;
+            let allCards: any[] = [];
+            let currentPage = 1;
+            let hasNext = true;
 
-            const response = await api.get('/scryfall/cards', { params: { q: searchQuery, page: 1 } });
-            setResults(response.data.data || []);
-            setHasMore(response.data.has_more || false);
+            while (hasNext) {
+                const response = await api.get('/scryfall/cards', { params: { q: searchQuery, page: currentPage } });
+                const { data, has_more } = response.data;
+
+                if (data) {
+                    allCards = [...allCards, ...data];
+                }
+
+                hasNext = has_more;
+                currentPage++;
+
+                // Small delay to be respectful to rate limits
+                if (hasNext) {
+                    await new Promise(resolve => setTimeout(resolve, 50));
+                }
+            }
+
+            setResults(allCards);
+            setHasMore(false);
         } catch (error) {
             console.error('Search failed', error);
         } finally {
@@ -527,18 +549,46 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, onSelectCard
                                             Found {results.length} {results.length === 1 ? 'card' : 'cards'}
                                         </p>
                                     </div>
-                                    <div
-                                        className="grid gap-4 transition-all duration-200 ease-out"
-                                        style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${zoomLevel}px, 1fr))` }}
-                                    >
-                                        {results.map((card) => (
-                                            <SearchResultCard
-                                                key={card.id}
-                                                card={card}
-                                                onSelect={onSelectCard}
-                                            />
-                                        ))}
-                                    </div>
+                                    {groupBy === 'none' ? (
+                                        <div
+                                            className="grid gap-4 transition-all duration-200 ease-out"
+                                            style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${zoomLevel}px, 1fr))` }}
+                                        >
+                                            {results.map((card) => (
+                                                <SearchResultCard
+                                                    key={card.id}
+                                                    card={card}
+                                                    onSelect={onSelectCard}
+                                                />
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-4">
+                                            {SortGroupsKeys(Object.keys(groupCards(results, groupBy)), groupBy).map(groupName => {
+                                                const group = groupCards(results, groupBy)[groupName];
+                                                return (
+                                                    <CollapsibleSection
+                                                        key={groupName}
+                                                        title={groupName}
+                                                        count={group.length}
+                                                    >
+                                                        <div
+                                                            className="grid gap-4 transition-all duration-200 ease-out"
+                                                            style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${zoomLevel}px, 1fr))` }}
+                                                        >
+                                                            {group.map((card) => (
+                                                                <SearchResultCard
+                                                                    key={card.id}
+                                                                    card={card}
+                                                                    onSelect={onSelectCard}
+                                                                />
+                                                            ))}
+                                                        </div>
+                                                    </CollapsibleSection>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
                                 </div>
                             )}
 
@@ -608,6 +658,28 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, onSelectCard
                         <div className="w-3 h-4 bg-gray-500/50 rounded-sm border border-gray-500/50" />
                         Add Card Back
                     </Button>
+                </div>
+
+                {/* Group By Pill */}
+                <div className="flex items-center gap-2 p-1 pl-3 pr-2 rounded-full border shadow-lg animate-in slide-in-from-bottom-4 fade-in duration-300 delay-50"
+                    style={{
+                        backgroundColor: 'var(--bg-secondary)',
+                        borderColor: 'var(--border-secondary)'
+                    }}
+                >
+                    <Layers className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--text-tertiary)' }} />
+                    <select
+                        value={groupBy}
+                        onChange={(e) => setGroupBy(e.target.value as GroupingOption)}
+                        className="bg-transparent text-sm border-none focus:ring-0 p-1 cursor-pointer outline-none"
+                        style={{ color: 'var(--text-primary)' }}
+                    >
+                        <option value="none">No Grouping</option>
+                        <option value="promo_types">Art Style</option>
+                        <option value="rarity">Rarity</option>
+                        <option value="color">Color</option>
+                        <option value="type">Card Type</option>
+                    </select>
                 </div>
 
                 {/* Zoom Slider Pill */}

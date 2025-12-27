@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Loader2, Heart, Plus, Trash2, X, ExternalLink, Book, Save, ZoomIn, ZoomOut, RotateCw } from 'lucide-react';
+import { Search, Loader2, Heart, Plus, Trash2, X, ExternalLink, Book, Save, ZoomIn, ZoomOut, Layers } from 'lucide-react';
+import { groupCards, type GroupingOption, SortGroupsKeys } from '../lib/cardGrouping';
+import { CollapsibleSection } from '../components/ui/CollapsibleSection';
 import api from '../api'; // Adjust path if needed
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -33,6 +35,7 @@ const DiscoverPage: React.FC = () => {
     const [searching, setSearching] = useState(false);
     const [page, setPage] = useState(1);
     const [hasMore, setHasMore] = useState(false);
+    const [groupBy, setGroupBy] = useState<GroupingOption>('none');
 
     // UI / Features
     const [zoomLevel, setZoomLevel] = useState(160);
@@ -104,9 +107,29 @@ const DiscoverPage: React.FC = () => {
         setPage(1);
         try {
             // Use existing scryfall endpoint
-            const response = await api.get('/scryfall/cards', { params: { q: query, page: 1 } });
-            setSearchResults(response.data.data || []);
-            setHasMore(response.data.has_more || false);
+            let allCards: any[] = [];
+            let currentPage = 1;
+            let hasNext = true;
+
+            while (hasNext) {
+                const response = await api.get('/scryfall/cards', { params: { q: query, page: currentPage } });
+                const { data, has_more } = response.data;
+
+                if (data) {
+                    allCards = [...allCards, ...data];
+                }
+
+                hasNext = has_more;
+                currentPage++;
+
+                // Small delay to be respectful to rate limits
+                if (hasNext) {
+                    await new Promise(resolve => setTimeout(resolve, 50));
+                }
+            }
+
+            setSearchResults(allCards);
+            setHasMore(false);
         } catch (error) {
             console.error(error);
         } finally {
@@ -588,13 +611,37 @@ const DiscoverPage: React.FC = () => {
                                 {searching ? (
                                     <div className="flex justify-center p-12"><Loader2 className="animate-spin w-8 h-8 text-blue-500" /></div>
                                 ) : searchResults.length > 0 ? (
-                                    <div className="grid gap-6"
-                                        style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${zoomLevel}px, 1fr))` }}
-                                    >
-                                        {searchResults.map((card) => (
-                                            <SearchResultCard key={card.id} card={card} />
-                                        ))}
-                                    </div>
+                                    groupBy === 'none' ? (
+                                        <div className="grid gap-6"
+                                            style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${zoomLevel}px, 1fr))` }}
+                                        >
+                                            {searchResults.map((card) => (
+                                                <SearchResultCard key={card.id} card={card} />
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-4">
+                                            {SortGroupsKeys(Object.keys(groupCards(searchResults, groupBy)), groupBy).map(groupName => {
+                                                const group = groupCards(searchResults, groupBy)[groupName];
+                                                return (
+                                                    <CollapsibleSection
+                                                        key={groupName}
+                                                        title={groupName}
+                                                        count={group.length}
+                                                    >
+                                                        <div
+                                                            className="grid gap-6 transition-all duration-200 ease-out"
+                                                            style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${zoomLevel}px, 1fr))` }}
+                                                        >
+                                                            {group.map((card) => (
+                                                                <SearchResultCard key={card.id} card={card} />
+                                                            ))}
+                                                        </div>
+                                                    </CollapsibleSection>
+                                                );
+                                            })}
+                                        </div>
+                                    )
                                 ) : (
                                     <div className="text-center py-20 text-gray-500">
                                         {query ? 'No results found.' : 'Search for cards to start discovering.'}
@@ -604,8 +651,32 @@ const DiscoverPage: React.FC = () => {
                         )}
                     </div>
 
-                    {/* Zoom Control (Floating at bottom center) */}
-                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30">
+                    {/* Floating Controls (Zoom + Group) */}
+                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 flex items-center gap-4">
+                        {/* Group By Pill */}
+                        {!activeWishlist && (
+                            <div className="flex items-center gap-2 p-2 px-3 rounded-full border shadow-lg backdrop-blur-md transition-all hover:scale-105"
+                                style={{
+                                    backgroundColor: 'var(--bg-secondary)',
+                                    borderColor: 'var(--border-secondary)'
+                                }}
+                            >
+                                <Layers className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--text-tertiary)' }} />
+                                <select
+                                    value={groupBy}
+                                    onChange={(e) => setGroupBy(e.target.value as GroupingOption)}
+                                    className="bg-transparent text-sm border-none focus:ring-0 p-1 cursor-pointer outline-none"
+                                    style={{ color: 'var(--text-primary)' }}
+                                >
+                                    <option value="none">No Grouping</option>
+                                    <option value="promo_types">Art Style</option>
+                                    <option value="rarity">Rarity</option>
+                                    <option value="color">Color</option>
+                                    <option value="type">Card Type</option>
+                                </select>
+                            </div>
+                        )}
+
                         <div className="flex items-center gap-3 p-2 px-4 rounded-full border shadow-lg backdrop-blur-md transition-all hover:scale-105"
                             style={{
                                 backgroundColor: 'var(--bg-secondary)',
