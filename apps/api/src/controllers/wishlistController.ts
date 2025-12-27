@@ -128,7 +128,7 @@ export const addCardToWishlist = async (req: AuthRequest, res: Response) => {
         }
 
         const { id } = req.params; // wishlist id
-        const { scryfallId, name, imageUrl, set, collectorNumber, priceUsd } = req.body;
+        const { scryfallId, name, imageUrl, imageUrlBack, set, collectorNumber, priceUsd } = req.body;
 
         if (!scryfallId || !name || !imageUrl) {
             return res.status(400).json({ error: 'Missing card details' });
@@ -149,6 +149,7 @@ export const addCardToWishlist = async (req: AuthRequest, res: Response) => {
                 scryfallId,
                 name,
                 imageUrl,
+                imageUrlBack,
                 set,
                 collectorNumber,
                 priceUsd: priceUsd ? parseFloat(priceUsd) : null

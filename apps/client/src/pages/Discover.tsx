@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Loader2, Heart, Plus, Trash2, X, ExternalLink, Book, Save, ZoomIn, ZoomOut, Layers, Menu } from 'lucide-react';
+import { Search, Loader2, Heart, Plus, Trash2, X, ExternalLink, Book, Save, ZoomIn, ZoomOut, Layers, Menu, RotateCw } from 'lucide-react';
 import { groupCards, type GroupingOption, SortGroupsKeys } from '../lib/cardGrouping';
 import { CollapsibleSection } from '../components/ui/CollapsibleSection';
 import api from '../api'; // Adjust path if needed
@@ -21,6 +21,7 @@ interface WishlistCard {
     scryfallId: string;
     name: string;
     imageUrl: string;
+    imageUrlBack?: string;
     priceUsd?: number;
     set?: string;
     collectorNumber?: string;
@@ -205,6 +206,7 @@ const DiscoverPage: React.FC = () => {
                 scryfallId: selectedCardForAdd.id,
                 name: selectedCardForAdd.name,
                 imageUrl: selectedCardForAdd.image_uris?.normal || selectedCardForAdd.card_faces?.[0]?.image_uris?.normal,
+                imageUrlBack: selectedCardForAdd.card_faces?.[1]?.image_uris?.normal,
                 set: selectedCardForAdd.set,
                 collectorNumber: selectedCardForAdd.collector_number,
                 priceUsd: selectedCardForAdd.prices?.usd
@@ -297,11 +299,16 @@ const DiscoverPage: React.FC = () => {
         let backImage = card.card_faces?.[1]?.image_uris?.normal;
         const price = card.prices?.usd || card.prices?.usd_foil;
 
+        const handleFlip = (e: React.MouseEvent) => {
+            e.stopPropagation();
+            setIsFlipped(!isFlipped);
+        }
+
         return (
             <div className="flex flex-col gap-2 group relative">
                 <div
                     className="relative w-full aspect-[63/88] rounded-lg cursor-pointer [perspective:1000px] hover:scale-105 transition-all shadow-md hover:shadow-xl"
-                    onClick={() => setIsFlipped(!isFlipped)}
+                    onClick={() => openAddToWishlistModal(card)}
                 >
                     <div className={`w-full h-full relative transition-all duration-500 [transform-style:preserve-3d] ${isFlipped ? '[transform:rotateY(180deg)]' : ''}`}>
                         <div className="absolute inset-0 w-full h-full [backface-visibility:hidden] rounded-lg overflow-hidden bg-gray-800">
@@ -328,10 +335,28 @@ const DiscoverPage: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Card Info Pill */}
-                <div className="flex justify-between items-center text-sm px-1">
-                    <span className="truncate flex-1 font-medium" style={{ color: 'var(--text-primary)' }}>{card.name}</span>
-                    {price && <span className="text-green-400 font-mono text-xs bg-green-900/30 px-1 rounded">${price}</span>}
+                {/* Card Info & Controls */}
+                <div className="flex items-center gap-2 justify-between">
+                    <div className="flex-1 min-w-0 flex justify-between items-center text-sm px-1">
+                        <span className="truncate flex-1 font-medium" style={{ color: 'var(--text-primary)' }}>{card.name}</span>
+                        {price && <span className="text-green-400 font-mono text-xs bg-green-900/30 px-1 rounded ml-2">${price}</span>}
+                    </div>
+
+                    {/* Flip Button */}
+                    {backImage && (
+                        <button
+                            onClick={handleFlip}
+                            className="border p-1.5 rounded-full transition-all shrink-0 hover:opacity-100 opacity-70"
+                            style={{
+                                backgroundColor: 'var(--bg-tertiary)',
+                                borderColor: 'var(--border-secondary)',
+                                color: 'var(--text-secondary)'
+                            }}
+                            title="Flip Card"
+                        >
+                            <RotateCw className="w-4 h-4" />
+                        </button>
+                    )}
                 </div>
             </div>
         )
@@ -339,6 +364,13 @@ const DiscoverPage: React.FC = () => {
 
     const WishlistCardItem = ({ card }: { card: WishlistCard }) => {
         const [isHovered, setIsHovered] = useState(false);
+        const [isFlipped, setIsFlipped] = useState(false);
+
+        const handleFlip = (e: React.MouseEvent) => {
+            e.stopPropagation();
+            setIsFlipped(!isFlipped);
+        }
+
         return (
             <div
                 className="flex flex-col gap-2 group relative"
@@ -346,24 +378,66 @@ const DiscoverPage: React.FC = () => {
                 onMouseLeave={() => setIsHovered(false)}
             >
                 <div
-                    className="relative w-full aspect-[63/88] rounded-lg overflow-hidden transition-all shadow-md hover:shadow-xl"
+                    className="relative w-full aspect-[63/88] rounded-lg cursor-pointer [perspective:1000px] hover:scale-105 transition-all shadow-md hover:shadow-xl"
+                    onClick={() => setIsFlipped(!isFlipped)}
                 >
-                    <img src={card.imageUrl} className="w-full h-full object-cover" />
-                    {isHovered && (
-                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center animate-in fade-in cursor-pointer">
-                            <button
-                                onClick={() => removeCardFromWishlist(card.id)}
-                                className="p-3 bg-red-600 rounded-full text-white hover:bg-red-700 shadow-lg"
-                                title="Remove from Wishlist"
-                            >
-                                <Trash2 className="w-5 h-5" />
-                            </button>
+                    <div className={`w-full h-full relative transition-all duration-500 [transform-style:preserve-3d] ${isFlipped ? '[transform:rotateY(180deg)]' : ''}`}>
+                        {/* Front */}
+                        <div className="absolute inset-0 w-full h-full [backface-visibility:hidden] rounded-lg overflow-hidden bg-gray-800">
+                            <img src={card.imageUrl} className="w-full h-full object-cover" />
+                            {isHovered && !isFlipped && (
+                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center animate-in fade-in cursor-pointer">
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); removeCardFromWishlist(card.id); }}
+                                        className="p-3 bg-red-600 rounded-full text-white hover:bg-red-700 shadow-lg"
+                                        title="Remove from Wishlist"
+                                    >
+                                        <Trash2 className="w-5 h-5" />
+                                    </button>
+                                </div>
+                            )}
                         </div>
-                    )}
+
+                        {/* Back */}
+                        {card.imageUrlBack && (
+                            <div className="absolute inset-0 w-full h-full [backface-visibility:hidden] [transform:rotateY(180deg)] rounded-lg overflow-hidden">
+                                <img src={card.imageUrlBack} className="w-full h-full object-cover" />
+                                {isHovered && isFlipped && (
+                                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center animate-in fade-in cursor-pointer">
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); removeCardFromWishlist(card.id); }}
+                                            className="p-3 bg-red-600 rounded-full text-white hover:bg-red-700 shadow-lg"
+                                            title="Remove from Wishlist"
+                                        >
+                                            <Trash2 className="w-5 h-5" />
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
                 </div>
-                <div className="flex justify-between items-center text-sm px-1">
-                    <span className="truncate flex-1 font-medium" style={{ color: 'var(--text-primary)' }}>{card.name}</span>
-                    {card.priceUsd && <span className="text-green-400 font-mono text-xs bg-green-900/30 px-1 rounded">${card.priceUsd}</span>}
+                <div className="flex items-center gap-2 justify-between px-1">
+                    <div className="flex-1 min-w-0 flex justify-between items-center text-sm">
+                        <span className="truncate flex-1 font-medium" style={{ color: 'var(--text-primary)' }}>{card.name}</span>
+                        {card.priceUsd && <span className="text-green-400 font-mono text-xs bg-green-900/30 px-1 rounded ml-2">${card.priceUsd}</span>}
+                    </div>
+
+                    {/* Flip Button */}
+                    {card.imageUrlBack && (
+                        <button
+                            onClick={handleFlip}
+                            className="border p-1.5 rounded-full transition-all shrink-0 hover:opacity-100 opacity-70"
+                            style={{
+                                backgroundColor: 'var(--bg-tertiary)',
+                                borderColor: 'var(--border-secondary)',
+                                color: 'var(--text-secondary)'
+                            }}
+                            title="Flip Card"
+                        >
+                            <RotateCw className="w-4 h-4" />
+                        </button>
+                    )}
                 </div>
             </div>
         )

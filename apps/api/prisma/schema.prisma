@@ -80,6 +80,7 @@ model WishlistCard {
   wishlist        Wishlist @relation(fields: [wishlistId], references: [id], onDelete: Cascade)
   scryfallId      String
   imageUrl        String
+  imageUrlBack    String?
   name            String
   set             String?
   collectorNumber String?
