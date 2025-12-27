@@ -13,6 +13,7 @@ import binderRoutes from './routes/binderRoutes';
 import searchRoutes from './routes/searchRoutes';
 import userRoutes from './routes/userRoutes';
 import savedSearchRoutes from './routes/savedSearchRoutes';
+import wishlistRoutes from './routes/wishlistRoutes';
 
 app.use(cors());
 app.use(express.json());
@@ -23,6 +24,7 @@ app.use('/binders', binderRoutes);
 app.use('/scryfall', searchRoutes);
 app.use('/user', userRoutes);
 app.use('/saved-searches', savedSearchRoutes);
+app.use('/wishlists', wishlistRoutes);
 
 app.get('/', (req, res) => {
   res.send('MTG Vault API');

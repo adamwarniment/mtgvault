@@ -82,6 +82,17 @@ const Layout: React.FC<{ children: React.ReactNode; allowScroll?: boolean }> = (
                         <Home className="w-5 h-5 flex-shrink-0" />
                         {sidebarExpanded && <span className="text-sm font-medium whitespace-nowrap">Dashboard</span>}
                     </Link>
+                    <Link
+                        to="/discover"
+                        className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${isActive('/discover')
+                            ? 'bg-blue-600/10 text-blue-400'
+                            : 'hover:text-white transition-colors'
+                            }`}
+                        style={{ color: isActive('/discover') ? undefined : 'var(--text-secondary)' }}
+                    >
+                        <Sparkles className="w-5 h-5 flex-shrink-0" />
+                        {sidebarExpanded && <span className="text-sm font-medium whitespace-nowrap">Discover</span>}
+                    </Link>
                 </nav>
 
                 {/* Bottom Section */}
@@ -172,6 +183,16 @@ const Layout: React.FC<{ children: React.ReactNode; allowScroll?: boolean }> = (
                     >
                         <Settings className="w-5 h-5" />
                     </button>
+                    <Link
+                        to="/discover"
+                        className={`p-2 rounded-lg transition-all ${isActive('/discover')
+                            ? 'text-blue-400 bg-blue-500/10'
+                            : ''
+                            }`}
+                        style={{ color: isActive('/discover') ? undefined : 'var(--text-secondary)' }}
+                    >
+                        <Sparkles className="w-5 h-5" />
+                    </Link>
                     <Link
                         to="/"
                         className={`p-2 rounded-lg transition-all ${isActive('/')

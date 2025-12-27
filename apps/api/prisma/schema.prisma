@@ -17,6 +17,7 @@ model User {
   updatedAt     DateTime       @updatedAt
   binders       Binder[]
   savedSearches SavedSearch[]
+  wishlists     Wishlist[]
 }
 
 model Binder {
@@ -61,4 +62,29 @@ model SavedSearch {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model Wishlist {
+  id        String         @id @default(uuid())
+  name      String
+  userId    String
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cards     WishlistCard[]
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+}
+
+model WishlistCard {
+  id              String   @id @default(uuid())
+  wishlistId      String
+  wishlist        Wishlist @relation(fields: [wishlistId], references: [id], onDelete: Cascade)
+  scryfallId      String
+  imageUrl        String
+  name            String
+  set             String?
+  collectorNumber String?
+  priceUsd        Float?
+  createdAt       DateTime @default(now())
+
+  @@index([wishlistId])
 }

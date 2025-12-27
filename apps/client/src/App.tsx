@@ -9,6 +9,7 @@ import Register from './pages/Register';
 
 import Dashboard from './pages/Dashboard';
 import BinderView from './pages/BinderView';
+import DiscoverPage from './pages/Discover';
 
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { token } = useAuth();
@@ -37,6 +38,14 @@ function App() {
                 element={
                   <PrivateRoute>
                     <BinderView />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/discover"
+                element={
+                  <PrivateRoute>
+                    <DiscoverPage />
                   </PrivateRoute>
                 }
               />
