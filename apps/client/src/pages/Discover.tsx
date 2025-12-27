@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Loader2, Heart, Plus, Trash2, X, ExternalLink, Book, Save, ZoomIn, ZoomOut, Layers } from 'lucide-react';
+import { Search, Loader2, Heart, Plus, Trash2, X, ExternalLink, Book, Save, ZoomIn, ZoomOut, Layers, Menu } from 'lucide-react';
 import { groupCards, type GroupingOption, SortGroupsKeys } from '../lib/cardGrouping';
 import { CollapsibleSection } from '../components/ui/CollapsibleSection';
 import api from '../api'; // Adjust path if needed
@@ -45,6 +45,7 @@ const DiscoverPage: React.FC = () => {
     const [newSearchName, setNewSearchName] = useState('');
     const [showSyntaxGuide, setShowSyntaxGuide] = useState(false);
     const searchContainerRef = useRef<HTMLDivElement>(null);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
     // Wishlists
     const [wishlists, setWishlists] = useState<Wishlist[]>([]);
@@ -159,6 +160,7 @@ const DiscoverPage: React.FC = () => {
             setShowCreateModal(false);
             setNewWishlistName('');
             setActiveWishlist(res.data); // Switch to new list
+            setIsSidebarOpen(false); // Close mobile sidebar
         } catch (error) {
             console.error(error);
         }
@@ -183,6 +185,7 @@ const DiscoverPage: React.FC = () => {
             setActiveWishlist(res.data);
             setSearchResults([]); // Clear search results to focus on list
             setQuery('');
+            setIsSidebarOpen(false); // Close mobile sidebar
         } catch (error) {
             console.error(error);
         } finally {
@@ -368,14 +371,35 @@ const DiscoverPage: React.FC = () => {
 
     return (
         <Layout allowScroll>
+            {/* Mobile Overlay for Sidebar */}
+            {isSidebarOpen && (
+                <div
+                    className="md:hidden fixed inset-0 z-40 bg-black/50 backdrop-blur-sm animate-in fade-in"
+                    onClick={() => setIsSidebarOpen(false)}
+                />
+            )}
+
             <div className="flex h-full">
                 {/* Left Sidebar: Wishlists */}
-                <div className="w-64 border-r flex flex-col shrink-0" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-primary)' }}>
+                <div
+                    className={`
+                        fixed inset-y-0 left-0 z-50 w-64 border-r flex flex-col shrink-0 
+                        transition-transform duration-300 ease-in-out
+                        md:relative md:translate-x-0
+                        ${isSidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'}
+                    `}
+                    style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-primary)' }}
+                >
                     <div className="p-4 border-b flex justify-between items-center" style={{ borderColor: 'var(--border-primary)' }}>
                         <h2 className="font-bold text-lg" style={{ color: 'var(--text-primary)' }}>Wishlists</h2>
-                        <button onClick={() => setShowCreateModal(true)} className="p-1 hover:bg-blue-500/10 text-blue-400 rounded transition-colors">
-                            <Plus className="w-5 h-5" />
-                        </button>
+                        <div className="flex items-center gap-1">
+                            <button onClick={() => setShowCreateModal(true)} className="p-1 hover:bg-blue-500/10 text-blue-400 rounded transition-colors">
+                                <Plus className="w-5 h-5" />
+                            </button>
+                            <button onClick={() => setIsSidebarOpen(false)} className="md:hidden p-1 hover:bg-red-500/10 text-red-400 rounded transition-colors">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
                     </div>
                     <div className="flex-1 overflow-y-auto p-2 space-y-1">
                         {wishlists.map(w => (
@@ -401,7 +425,7 @@ const DiscoverPage: React.FC = () => {
                         <Button
                             variant="success"
                             className="w-full gap-2"
-                            onClick={() => { setActiveWishlist(null); }}
+                            onClick={() => { setActiveWishlist(null); setIsSidebarOpen(false); }}
                         >
                             <Search className="w-4 h-4" />
                             Card Search
@@ -415,13 +439,21 @@ const DiscoverPage: React.FC = () => {
                     <div className="p-6 border-b z-20 shadow-sm" style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border-primary)' }}>
                         {activeWishlist ? (
                             <div className="flex items-center justify-between">
-                                <div>
-                                    <div className="flex items-center gap-2 text-gray-400 text-sm mb-1">
-                                        <span>Wishlist</span>
-                                        <span className="w-1 h-1 bg-gray-600 rounded-full" />
-                                        <span>{activeWishlist.createdAt ? new Date(activeWishlist.createdAt).toLocaleDateString() : ''}</span>
+                                <div className="flex items-center gap-3">
+                                    <button
+                                        onClick={() => setIsSidebarOpen(true)}
+                                        className="md:hidden p-2 -ml-2 rounded-lg hover:bg-white/10 text-gray-400 transition-colors"
+                                    >
+                                        <Menu className="w-6 h-6" />
+                                    </button>
+                                    <div>
+                                        <div className="flex items-center gap-2 text-gray-400 text-sm mb-1">
+                                            <span>Wishlist</span>
+                                            <span className="w-1 h-1 bg-gray-600 rounded-full" />
+                                            <span>{activeWishlist.createdAt ? new Date(activeWishlist.createdAt).toLocaleDateString() : ''}</span>
+                                        </div>
+                                        <h1 className="text-3xl font-bold" style={{ color: 'var(--text-primary)' }}>{activeWishlist.name}</h1>
                                     </div>
-                                    <h1 className="text-3xl font-bold" style={{ color: 'var(--text-primary)' }}>{activeWishlist.name}</h1>
                                 </div>
                                 <div className="text-right">
                                     <div className="text-2xl font-mono text-green-400 font-bold">
@@ -433,7 +465,15 @@ const DiscoverPage: React.FC = () => {
                             </div>
                         ) : (
                             <div className="max-w-3xl mx-auto">
-                                <h1 className="text-2xl font-bold mb-4 text-center" style={{ color: 'var(--text-primary)' }}>Discover Cards</h1>
+                                <div className="relative flex items-center justify-center mb-4">
+                                    <button
+                                        onClick={() => setIsSidebarOpen(true)}
+                                        className="md:hidden absolute left-0 p-2 -ml-2 rounded-lg hover:bg-white/10 text-gray-400 transition-colors"
+                                    >
+                                        <Menu className="w-6 h-6" />
+                                    </button>
+                                    <h1 className="text-2xl font-bold text-center" style={{ color: 'var(--text-primary)' }}>Discover Cards</h1>
+                                </div>
                                 <form onSubmit={handleSearch} className="flex gap-2 relative z-40">
                                     {/* Syntax Guide Toggle */}
                                     <button
